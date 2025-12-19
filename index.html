@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>AI 智能出题系统 - RAG版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body class="bg-gray-100 p-10">
+    <div class="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow">
+        <h1 class="text-2xl font-bold mb-6 text-blue-600">自适应学习出题系统 (RAG)</h1>
+        
+        <div class="flex gap-4 mb-8">
+            <input id="keyword" type="text" placeholder="输入知识点，如：列表推导式" 
+                   class="flex-1 border p-2 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+            <button onclick="generate()" class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 transition">
+                生成题目
+            </button>
+        </div>
+
+        <div id="loading" class="hidden text-center text-gray-500 mb-4">🤖 AI 正在翻书思考中...</div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="border p-4 rounded bg-gray-50">
+                <h2 class="font-semibold mb-2 border-b pb-1 text-gray-700">📑 检索到的教材片段</h2>
+                <div id="context" class="text-sm text-gray-600 whitespace-pre-wrap h-64 overflow-y-auto">
+                    等待出题...
+                </div>
+            </div>
+            <div class="border p-4 rounded bg-blue-50">
+                <h2 class="font-semibold mb-2 border-b pb-1 text-blue-700">🤖 AI 生成题目</h2>
+                <div id="question" class="text-sm text-gray-800 whitespace-pre-wrap h-64 overflow-y-auto">
+                    等待出题...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function generate() {
+            const kw = document.getElementById('keyword').value;
+            if(!kw) return alert("请输入关键词");
+            
+            document.getElementById('loading').classList.remove('hidden');
+            
+            try {
+                // 注意：这里端口要和你刚才启动的 8005 对上
+                const res = await axios.post('http://127.0.0.1:8005/generate_question', { keyword: kw });
+                
+                // 假设后端返回的数据包含 context 和 data
+                document.getElementById('context').innerText = res.data.context || "（未返回原文）";
+                document.getElementById('question').innerText = res.data.data;
+            } catch (err) {
+                alert("请求失败，请检查后端服务");
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
