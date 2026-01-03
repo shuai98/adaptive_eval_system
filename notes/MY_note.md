@@ -243,3 +243,27 @@ Mermaid做图：
 “那我按空格切！把单词分开。嗯，切开了，现在每块大概 500 字了。”
 第四轮尝试（暴力撕纸）：
 “如果连空格都没有（比如一长串乱码），我就在第 500 个字那里硬切！不管有没有切断单词，必须保证不超过 500！”
+
+
+修改前：![alt text](image-10.png)
+修改后：![alt text](image-11.png)
+文档被切分为更多块，说明大块少了，虽然报错，但是重新加载后还是成功切分并入库
+
+
+报错：
+正在发送请求，测试关键词：【装饰器】...
+ 失败: {"detail":"Error executing plan: Error sending backfill request to compactor: Error constructing hnsw segment reader: Error creating hnsw segment reader: Error loading hnsw index"}
+  ![alt text](image-12.png)
+ WARNING:  WatchFiles detected changes in 'test_rerank.py'. Reloading...
+收到出题请求，关键词: 装饰器
+INFO:     127.0.0.1:62639 - "POST /generate_question HTTP/1.1" 500 Internal Server Error
+![alt text](image-13.png)
+
+解决：删除chroma.db，重新运行init_rag.py
+ChromaDB 是一个基于文件的数据库。当你之前的代码切分方式是 A，现在的代码切分方式是 B，或者上次写入没写完就关机了，它的索引文件（HNSW Index）就会对不上号，然后就崩了。以后遇到这种 hnsw 开头的报错，直接删掉 chroma_db 重建即可。
+
+rerank测试结果：
+![alt text](image-14.png)
+
+前端报错：
+![alt text](image-15.png)

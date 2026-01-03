@@ -1,61 +1,197 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>AI 智能出题系统 - RAG版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 自适应测评系统 (XDU)</title>
+    <!-- 引入 Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- 引入 Markdown 渲染库 (让题目更好看) -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- 引入 Tailwind CSS (让界面瞬间变美) -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        .markdown-body p { margin-bottom: 10px; }
+        .markdown-body pre { background: #f3f4f6; padding: 10px; border-radius: 5px; }
+    </style>
 </head>
-<body class="bg-gray-100 p-10">
-    <div class="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow">
-        <h1 class="text-2xl font-bold mb-6 text-blue-600">自适应学习出题系统 (RAG)</h1>
+<body class="bg-gray-50 min-h-screen">
+
+<div id="app" class="container mx-auto px-4 py-8 max-w-4xl">
+    <!-- 标题栏 -->
+    <header class="text-center mb-10">
+        <h1 class="text-3xl font-bold text-blue-600 mb-2"> 基于 RAG 的个性化自适应测评系统</h1>
+        <p class="text-gray-500">西安电子科技大学 · 毕业设计原型</p>
+    </header>
+
+    <!-- 核心功能区 -->
+    <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-4 border-l-4 border-blue-500 pl-3"> 智能出题</h2>
         
-        <div class="flex gap-4 mb-8">
-            <input id="keyword" type="text" placeholder="输入知识点，如：列表推导式" 
-                   class="flex-1 border p-2 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-            <button onclick="generate()" class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 transition">
-                生成题目
+        <div class="flex gap-2 mb-6">
+            <input 
+                v-model="keyword" 
+                @keyup.enter="generateQuestion"
+                type="text" 
+                placeholder="请输入知识点（例如：装饰器、列表推导式、二叉树）" 
+                class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+            <button 
+                @click="generateQuestion" 
+                :disabled="loading"
+                class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
+            >
+                {{ loading ? '生成中...' : '生成题目' }}
             </button>
         </div>
 
-        <div id="loading" class="hidden text-center text-gray-500 mb-4">🤖 AI 正在翻书思考中...</div>
+        <!-- 题目显示区域 -->
+        <div v-if="questionData" class="animate-fade-in">
+            <!-- 题目内容 -->
+            <div class="bg-blue-50 p-4 rounded-lg mb-4">
+                <div class="font-medium text-lg mb-2">题目：</div>
+                <!-- 使用 v-html 渲染 Markdown -->
+                <div v-html="renderMarkdown(questionData.question)" class="markdown-body text-gray-800"></div>
+            </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="border p-4 rounded bg-gray-50">
-                <h2 class="font-semibold mb-2 border-b pb-1 text-gray-700">📑 检索到的教材片段</h2>
-                <div id="context" class="text-sm text-gray-600 whitespace-pre-wrap h-64 overflow-y-auto">
-                    等待出题...
+            <!-- 选项区域 -->
+            <div class="space-y-3 mb-6">
+                <div 
+                    v-for="(option, key) in questionData.options" 
+                    :key="key"
+                    @click="selectOption(key)"
+                    :class="[
+                        'p-3 border rounded-lg cursor-pointer transition-all flex items-center',
+                        selectedOption === key ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'border-gray-200 hover:bg-gray-50'
+                    ]"
+                >
+                    <span class="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-gray-300 mr-3 font-bold text-gray-600">
+                        {{ key }}
+                    </span>
+                    <span class="text-gray-700">{{ option }}</span>
                 </div>
             </div>
-            <div class="border p-4 rounded bg-blue-50">
-                <h2 class="font-semibold mb-2 border-b pb-1 text-blue-700">🤖 AI 生成题目</h2>
-                <div id="question" class="text-sm text-gray-800 whitespace-pre-wrap h-64 overflow-y-auto">
-                    等待出题...
+
+            <!-- 提交按钮 -->
+            <div v-if="!showResult" class="text-center">
+                <button 
+                    @click="submitAnswer" 
+                    :disabled="!selectedOption"
+                    class="bg-green-600 text-white px-8 py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-300"
+                >
+                    提交答案
+                </button>
+            </div>
+
+            <!-- 结果解析区域 -->
+            <div v-if="showResult" class="mt-6 p-5 rounded-lg border" :class="isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'">
+                <div class="flex items-center mb-3">
+                    <span class="text-2xl mr-2">{{ isCorrect ? '' : '' }}</span>
+                    <h3 class="text-lg font-bold" :class="isCorrect ? 'text-green-700' : 'text-red-700'">
+                        {{ isCorrect ? '回答正确！' : '回答错误' }}
+                    </h3>
+                </div>
+                <p class="mb-2"><strong>正确答案：</strong> {{ questionData.answer }}</p>
+                <div class="bg-white p-3 rounded border border-gray-200">
+                    <p class="font-bold text-gray-600 mb-1"> 解析：</p>
+                    <p class="text-gray-700">{{ questionData.analysis }}</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <script>
-        async function generate() {
-            const kw = document.getElementById('keyword').value;
-            if(!kw) return alert("请输入关键词");
-            
-            document.getElementById('loading').classList.remove('hidden');
-            
-            try {
-                // 注意：这里端口要和你刚才启动的 8005 对上
-                const res = await axios.post('http://127.0.0.1:8080/generate_question', { keyword: kw });
+    <!-- 调试信息区 (RAG展示) -->
+    <div v-if="ragContext" class="bg-gray-800 rounded-xl shadow-lg p-6 text-gray-300 text-sm">
+        <h3 class="text-gray-400 font-bold mb-2 uppercase tracking-wider text-xs">RAG 检索到的教材原文 (Top 3)</h3>
+        <pre class="whitespace-pre-wrap font-mono bg-gray-900 p-4 rounded border border-gray-700 h-48 overflow-y-auto">{{ ragContext }}</pre>
+    </div>
+
+</div>
+
+<script>
+    const { createApp, ref } = Vue;
+
+    createApp({
+        setup() {
+            const keyword = ref('');
+            const loading = ref(false);
+            const questionData = ref(null);
+            const ragContext = ref('');
+            const selectedOption = ref(null);
+            const showResult = ref(false);
+            const isCorrect = ref(false);
+
+            // 解析 Markdown
+            const renderMarkdown = (text) => {
+                return marked.parse(text || '');
+            };
+
+            // 生成题目
+            const generateQuestion = async () => {
+                if (!keyword.value) return alert('请输入知识点');
                 
-                // 假设后端返回的数据包含 context 和 data
-                document.getElementById('context').innerText = res.data.context || "（未返回原文）";
-                document.getElementById('question').innerText = res.data.data;
-            } catch (err) {
-                alert("请求失败，请检查后端服务");
-            } finally {
-                document.getElementById('loading').classList.add('hidden');
-            }
+                loading.value = true;
+                questionData.value = null;
+                selectedOption.value = null;
+                showResult.value = false;
+                ragContext.value = '';
+
+                try {
+                    // 注意：这里端口号要改成你后端运行的端口 (8088)
+                    const res = await fetch('http://127.0.0.1:8088/generate_question', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ keyword: keyword.value })
+                    });
+                    
+                    const data = await res.json();
+                    
+                    if (data.status === 'success') {
+                        // 解析后端返回的 JSON 字符串
+                        const aiContent = JSON.parse(data.data);
+                        questionData.value = aiContent;
+                        ragContext.value = data.context; // 显示 RAG 原文
+                    } else {
+                        alert('生成失败：' + data.detail);
+                    }
+                } catch (e) {
+                    alert('连接后端失败，请检查端口是否为 8088');
+                    console.error(e);
+                } finally {
+                    loading.value = false;
+                }
+            };
+
+            // 选择选项
+            const selectOption = (key) => {
+                if (!showResult.value) {
+                    selectedOption.value = key;
+                }
+            };
+
+            // 提交答案
+            const submitAnswer = () => {
+                if (!selectedOption.value) return;
+                showResult.value = true;
+                // 简单的判断逻辑
+                isCorrect.value = selectedOption.value === questionData.value.answer;
+            };
+
+            return {
+                keyword,
+                loading,
+                questionData,
+                ragContext,
+                selectedOption,
+                showResult,
+                isCorrect,
+                generateQuestion,
+                selectOption,
+                submitAnswer,
+                renderMarkdown
+            };
         }
-    </script>
+    }).mount('#app');
+</script>
 </body>
 </html>

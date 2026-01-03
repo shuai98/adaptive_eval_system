@@ -3,10 +3,12 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_chroma import Chroma
+#from langchain_chroma import Chroma
+from langchain_community.vectorstores import FAISS
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from fastapi.middleware.cors import CORSMiddleware
+from sentence_transformers import CrossEncoder
 
 app = FastAPI()
 
@@ -43,13 +45,27 @@ load_dotenv()
 os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 
 # 2. 初始化 RAG 组件（单例模式，启动时加载一次）
-embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-small-zh-v1.5")
-vector_db = Chroma(persist_directory="./chroma_db", embedding_function=embeddings)
+embeddings = HuggingFaceEmbeddings(
+    model_name="BAAI/bge-small-zh-v1.5",
+    model_kwargs={'device': 'cpu'},
+    encode_kwargs={'normalize_embeddings': True} # 必须加上这个！
+)
+vector_db = FAISS.load_local(
+    folder_path="./faiss_index", 
+    embeddings=embeddings,
+    allow_dangerous_deserialization=True 
+)
+# --- 新增：加载 BGE Rerank 模型 ---
+# CrossEncoder 是用来做精细比对的
+print(" 正在加载 BGE-Reranker 模型 (首次运行需下载，约1GB)...")
+reranker = CrossEncoder('BAAI/bge-reranker-base')
+print(" Rerank 模型加载完毕！")
 
 llm = ChatOpenAI(
     model='deepseek-chat', 
-    openai_api_key=os.getenv("DEEPSEEK_API_KEY"), 
-    openai_api_base='https://api.deepseek.com/v1'
+    openai_api_key=os.getenv("DEEPSEEK_API_KEY"),
+    openai_api_base='https://api.deepseek.com/v1',
+    model_kwargs={"response_format": {"type": "json_object"}}#强制返回json格式
 )
 
 # 定义请求格式
@@ -61,8 +77,38 @@ async def generate_question(request: QuestionRequest):
     try:
         # --- 核心 RAG 逻辑 ---
         # 1. 检索
-        docs = vector_db.similarity_search(request.keyword, k=2)
-        context = "\n".join([d.page_content for d in docs])
+        print(f" 收到出题请求，关键词: {request.keyword}")
+
+        # ================= Rerank 核心逻辑 =================
+        
+        # 1. 【海选】(Recall): 先用向量检索找 10 个大概相关的
+        # 为什么是 10？为了扩大搜索范围，先把沾边的都捞上来
+        initial_docs = vector_db.similarity_search(request.keyword, k=10)
+        
+        # 2. 【配对】: 准备给 Rerank 模型打分的数据
+        # 格式必须是: [[问题, 文档内容], [问题, 文档内容], ...]
+        pairs = [[request.keyword, doc.page_content] for doc in initial_docs]
+
+        # 3. 【打分】(Scoring): 让 BGE-Reranker 逐一阅读并打分
+        # 分数越高，代表相关性越强
+        scores = reranker.predict(pairs)
+
+        # 4. 【排序】: 根据分数从高到低重新排队
+        # zip 把文档和分数捆绑，sorted 进行排序
+        scored_docs = sorted(zip(initial_docs, scores), key=lambda x: x[1], reverse=True)
+
+        # 5. 【精选】(Precision): 只取前 3 名给 AI
+        # Top 3 是给大模型看的精华
+        top_k = 3
+        final_docs = [doc for doc, score in scored_docs[:top_k]]
+        
+        # --- (可选) 打印日志，方便你面试时展示 Rerank 的效果 ---
+        print(f" Rerank 优化报告:")
+        for i, (doc, score) in enumerate(scored_docs[:top_k]):
+            print(f"   Top{i+1} (得分 {score:.4f}): {doc.page_content[:30].replace(chr(10), ' ')}...")
+
+        # ================= 逻辑结束 =================
+        context = "\n\n".join([d.page_content for d in final_docs])
         
         # 2. 构造 Prompt（这里我针对你刚才遇到的“复读机”问题做了优化）
         template = """
@@ -72,17 +118,25 @@ async def generate_question(request: QuestionRequest):
         {context}
         
         【输出要求】：
-        1. 题目必须基于背景知识。
-        2. 请直接输出题目、选项、答案和解析。
-        3. 禁止重复输出，禁止出现多余的填充字符。
-        4. 格式：
-           题目：...
-           A. ...
-           B. ...
-           C. ...
-           D. ...
-           答案：...
-           解析：...
+        1. 必须返回标准的 JSON 格式。
+        2. JSON 必须包含以下字段：
+           - "question": 题目描述
+           - "options": 一个字典，包含 "A", "B", "C", "D"
+           - "answer": 正确选项的 Key (如 "A")
+           - "analysis": 解析
+        
+        【示例格式】：
+        {{
+            "question": "Python中用于定义函数的关键字是？",
+            "options": {{
+                "A": "func",
+                "B": "def",
+                "C": "function",
+                "D": "define"
+            }},
+            "answer": "B",
+            "analysis": "Python使用def关键字定义函数。"
+        }}
         """
         
         prompt = ChatPromptTemplate.from_template(template)
@@ -91,11 +145,22 @@ async def generate_question(request: QuestionRequest):
         # 3. 调用生成
         response = chain.invoke({"context": context, "keyword": request.keyword})
         
+        # --- 新增：清洗 AI 返回的数据 ---
+        content = response.content
+        # 1. 去掉可能存在的 markdown 代码块符号
+        if "```json" in content:
+            content = content.replace("```json", "").replace("```", "")
+        # 2. 去掉首尾空格
+        content = content.strip()
+        
+        # 3. 打印出来看看（方便调试）
+        print(f"AI 返回清洗后的内容: {content[:50]}...")
+
         return {
             "status": "success", 
-            "data": response.content, 
-            "context": context  # <--- 必须加上这一行，前端才能拿到检索到的原文
-}
+            "data": content,  # <--- 注意：这里返回清洗后的 content
+            "context": context 
+        }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
