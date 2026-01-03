@@ -2,7 +2,7 @@ import os
 import glob
 import shutil
 from langchain_community.document_loaders import TextLoader, PyPDFLoader
-from langchain_text_splitters import CharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 
@@ -68,7 +68,12 @@ def init_local_rag():
     # --- 第二步：文档分块 (Chunking) ---
     print("正在进行文档分块...")
     # 优化点：面试时可以说“我选择了500字符+50重叠，以平衡上下文完整性和检索粒度”
-    text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+    #将CharacterTextSplitter改为RecursiveCharacterTextSplitter，这样不会切出来一千多字的块
+    text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=500,
+    chunk_overlap=50,
+    separators=["\n\n", "\n", "。", "！", "？", "，", " ", ""] # 优先按段落和句号切
+    )
     chunks = text_splitter.split_documents(documents)
     print(f"   分块完成，共切分为 {len(chunks)} 个片段。")
 
