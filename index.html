@@ -45,7 +45,7 @@
             
             try {
                 // 注意：这里端口要和你刚才启动的 8005 对上
-                const res = await axios.post('http://127.0.0.1:8005/generate_question', { keyword: kw });
+                const res = await axios.post('http://127.0.0.1:8080/generate_question', { keyword: kw });
                 
                 // 假设后端返回的数据包含 context 和 data
                 document.getElementById('context').innerText = res.data.context || "（未返回原文）";

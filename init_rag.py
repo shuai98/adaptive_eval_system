@@ -1,67 +1,84 @@
 import os
-from langchain_community.document_loaders import TextLoader
+import glob
+import shutil
+from langchain_community.document_loaders import TextLoader, PyPDFLoader
 from langchain_text_splitters import CharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
-import shutil
-
 
 # 1. 解决下载慢的问题：强制使用国内 HuggingFace 镜像源
 os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 
 def init_local_rag():
-    # 配置路径
-    # 获取当前脚本所在的文件夹绝对路径 (D:\毕设_code\adaptive_eval_system)
+    # --- 配置路径 ---
+    # 获取当前脚本所在的文件夹绝对路径
     current_dir = os.path.dirname(os.path.abspath(__file__))
-
-    # 正确指向 docs 文件夹下的 db.txt
-    raw_data_path = os.path.join(current_dir, "docs", "db.txt")
-
-    # 向量数据库建议也放在根目录或指定位置
+    
+    # 指向 docs 文件夹
+    docs_dir = os.path.join(current_dir, "docs")
+    
+    # 向量数据库存储位置
     persist_directory = os.path.join(current_dir, "chroma_db")
 
-
-    # 路径设置
-    db_path = "./chroma_db"
-
-    # 如果你想每次运行 init_rag.py 都用新的 db.txt 覆盖旧的数据库
-    if os.path.exists(db_path):
-      shutil.rmtree(db_path) # 自动删除旧文件夹
-      print("🧹 已清理旧的向量数据库")
-
-    # 然后再执行加载文档、切片、生成向量的代码...
-
-    print(f"✅ 脚本正在查找路径: {raw_data_path}")
+    # --- 清理旧数据 ---
+    # 每次运行都清空旧库，保证数据是最新的
+    if os.path.exists(persist_directory):
+        shutil.rmtree(persist_directory)
+        print(f"已清理旧的向量数据库: {persist_directory}")
 
     print("开始 RAG 初始化流程...")
+    print(f"正在扫描文档目录: {docs_dir}")
 
-    # --- 第一步：加载文档 ---
-    if not os.path.exists(raw_data_path):
-        print(f"错误：找不到 {raw_data_path}，请先创建该文件并写入教材内容。")
+    # --- 第一步：加载文档 (支持 TXT 和 PDF) ---
+    documents = []
+    
+    # 1.1 检查目录是否存在
+    if not os.path.exists(docs_dir):
+        print(f"错误：找不到 docs 文件夹！请在 {current_dir} 下创建 docs 文件夹。")
+        return
+
+    # 1.2 加载所有 .txt 文件
+    txt_files = glob.glob(os.path.join(docs_dir, "*.txt"))
+    for file_path in txt_files:
+        try:
+            loader = TextLoader(file_path, encoding='utf-8')
+            documents.extend(loader.load())
+            print(f"   已加载 TXT: {os.path.basename(file_path)}")
+        except Exception as e:
+            print(f"   加载 TXT 失败 {os.path.basename(file_path)}: {e}")
+
+    # 1.3 加载所有 .pdf 文件 (新增功能！)
+    pdf_files = glob.glob(os.path.join(docs_dir, "*.pdf"))
+    for file_path in pdf_files:
+        try:
+            # 面试加分点：PyPDFLoader 会自动处理分页，把每一页作为一个 Document
+            loader = PyPDFLoader(file_path)
+            documents.extend(loader.load())
+            print(f"   已加载 PDF: {os.path.basename(file_path)}")
+        except Exception as e:
+            print(f"   加载 PDF 失败 {os.path.basename(file_path)}: {e}")
+
+    # 1.4 检查是否加载到了数据
+    if not documents:
+        print("警告：docs 文件夹里是空的，或者没有 .txt/.pdf 文件！")
         return
     
-    loader = TextLoader(raw_data_path, encoding='utf-8')
-    documents = loader.load()
-    print(f"成功加载文档，当前字符数：{len(documents[0].page_content)}")
+    print(f"文档加载完毕，共加载了 {len(documents)} 个文档片段/页面。")
 
     # --- 第二步：文档分块 (Chunking) ---
-    # 找工作重点：面试官会问为什么选这个 size。
-    # 答：300-500字符能保留足够的上下文，同时方便检索。
+    print("正在进行文档分块...")
+    # 优化点：面试时可以说“我选择了500字符+50重叠，以平衡上下文完整性和检索粒度”
     text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=50)
     chunks = text_splitter.split_documents(documents)
-    print(f"分块完成，共切分为 {len(chunks)} 个片段。")
+    print(f"   分块完成，共切分为 {len(chunks)} 个片段。")
 
-    # --- 第三步：加载 BGE Embedding 模型 ---
-    print("正在加载 BGE-small-zh 模型（首次运行将自动下载，请保持网络畅通）...")
-    model_name = "BAAI/bge-small-zh-v1.5"
-    model_kwargs = {'device': 'cpu'} # 没显卡也能跑
-    encode_kwargs = {'normalize_embeddings': True} # 归一化处理，提升检索精度
-    
+    # --- 第三步：加载 Embedding 模型 ---
+    print("正在加载 BGE-small-zh 模型...")
     embeddings = HuggingFaceEmbeddings(
-    model_name="BAAI/bge-small-zh-v1.5",
-    model_kwargs={'device': 'cpu'},
-    encode_kwargs={'normalize_embeddings': True}
-)
+        model_name="BAAI/bge-small-zh-v1.5",
+        model_kwargs={'device': 'cpu'},
+        encode_kwargs={'normalize_embeddings': True}
+    )
 
     # --- 第四步：存入向量数据库 (Vector DB) ---
     print("正在计算向量并存入 Chroma 数据库...")
@@ -71,10 +88,10 @@ def init_local_rag():
         persist_directory=persist_directory
     )
     
-    # 强制保存（旧版 LangChain 需要，新版建议也写上）
-    vector_db.persist()
-    print(f" 成功！向量数据库已保存至: {persist_directory}")
-    print("你现在可以去文件夹里看看，是不是多了个 chroma_db 文件夹？")
+    # 新版 Chroma 自动保存，但这行留着也没事
+    # vector_db.persist() 
+    print(f"成功！RAG 知识库初始化完成！")
+    print(f"数据库路径: {persist_directory}")
 
 if __name__ == "__main__":
     init_local_rag()

@@ -1,6 +1,6 @@
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
-from langchain.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 import os
 
@@ -42,7 +42,8 @@ def generate_question_with_rag(user_keyword):
     llm = ChatOpenAI(
         model='deepseek-chat', 
         openai_api_key='DEEPSEEK_API_KEY', 
-        openai_api_base='https://api.deepseek.com/v1'
+        openai_api_base='https://api.deepseek.com/v1',
+        temperature=0.3
     )
     
     chain = prompt | llm

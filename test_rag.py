@@ -21,7 +21,7 @@ llm = ChatOpenAI(
 
 def test_comparison(keyword):
     print(f"\n" + "="*50)
-    print(f"🔍 测试关键词: 【{keyword}】")
+    print(f" 测试关键词: 【{keyword}】")
     print("="*50)
 
     # --- 状态 A: 纯 DeepSeek ---
@@ -37,11 +37,11 @@ def test_comparison(keyword):
     docs = vector_db.similarity_search(keyword, k=2)
     context = "\n".join([d.page_content for d in docs])
     
-    print(f"📑 检索到的教材原文片段:\n{context[:200]}...") 
+    print(f" 检索到的教材原文片段:\n{context[:200]}...") 
 
     prompt = f"你是一个老师，请严格根据以下背景知识，为'{keyword}'出一道题。\n背景知识：{context}"
     res_rag = llm.invoke(prompt)
-    print("\n🤖 RAG 生成的题目:")
+    print("\n RAG 生成的题目:")
     print(res_rag.content)
 
 if __name__ == "__main__":

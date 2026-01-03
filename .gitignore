@@ -12,6 +12,15 @@ vh-env/
 pip-log.txt
 pip-delete-this-directory.txt
 
+
+# 必须忽略你的虚拟环境文件夹名字
+FastAPI_env/
+env/
+vh-env/
+venv/
+.venv/
+
+
 # --- 数据库与大型文件 ---
 # 向量数据库（这个很大且包含私有数据，不建议传）
 chroma_db/
