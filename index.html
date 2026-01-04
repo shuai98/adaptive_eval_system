@@ -3,109 +3,233 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 自适应测评系统 (XDU)</title>
-    <!-- 引入 Vue 3 -->
+    <title>自适应测评系统</title>
+    <!-- Vue 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <!-- 引入 Markdown 渲染库 (让题目更好看) -->
+    <!-- Markdown 解析 -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- 引入 Tailwind CSS (让界面瞬间变美) -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .markdown-body p { margin-bottom: 10px; }
-        .markdown-body pre { background: #f3f4f6; padding: 10px; border-radius: 5px; }
+        /* 覆盖默认样式，保持专业感 */
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        .markdown-body p { margin-bottom: 0.75em; line-height: 1.6; }
+        .markdown-body pre { background: #f1f5f9; padding: 12px; border-radius: 6px; overflow-x: auto; font-family: monospace; }
+        .active-nav { background-color: #eff6ff; color: #2563eb; border-right: 3px solid #2563eb; }
+        /* 滚动条样式 */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="bg-slate-50 h-screen flex overflow-hidden text-slate-800">
 
-<div id="app" class="container mx-auto px-4 py-8 max-w-4xl">
-    <!-- 标题栏 -->
-    <header class="text-center mb-10">
-        <h1 class="text-3xl font-bold text-blue-600 mb-2"> 基于 RAG 的个性化自适应测评系统</h1>
-        <p class="text-gray-500">西安电子科技大学 · 毕业设计原型</p>
-    </header>
+<div id="app" class="flex w-full h-full">
+    
+    <!-- 左侧侧边栏导航 -->
+    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col flex-shrink-0">
+        <div class="p-6 border-b border-slate-100">
+            <h1 class="text-xl font-bold text-slate-900 tracking-tight">自适应测评系统</h1>
+            <p class="text-xs text-slate-500 mt-1">毕业设计原型 v3.0</p>
+        </div>
 
-    <!-- 核心功能区 -->
-    <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
-        <h2 class="text-xl font-semibold mb-4 border-l-4 border-blue-500 pl-3"> 智能出题</h2>
+        <nav class="flex-1 overflow-y-auto py-4">
+            <div class="px-4 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">学生视图</div>
+            <a @click="currentView = 'student_quiz'" :class="['flex items-center px-6 py-3 cursor-pointer text-sm font-medium transition-colors', currentView === 'student_quiz' ? 'active-nav' : 'text-slate-600 hover:bg-slate-50']">
+                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                智能出题 (客观题)
+            </a>
+            <a @click="currentView = 'student_grade'" :class="['flex items-center px-6 py-3 cursor-pointer text-sm font-medium transition-colors', currentView === 'student_grade' ? 'active-nav' : 'text-slate-600 hover:bg-slate-50']">
+                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                作业批改 (主观题)
+            </a>
+
+            <div class="px-4 mt-6 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">教师视图</div>
+            <a @click="currentView = 'teacher_manage'" :class="['flex items-center px-6 py-3 cursor-pointer text-sm font-medium transition-colors', currentView === 'teacher_manage' ? 'active-nav' : 'text-slate-600 hover:bg-slate-50']">
+                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                知识库管理
+            </a>
+
+            <div class="px-4 mt-6 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">研发视图</div>
+            <a @click="currentView = 'dev_compare'" :class="['flex items-center px-6 py-3 cursor-pointer text-sm font-medium transition-colors', currentView === 'dev_compare' ? 'active-nav' : 'text-slate-600 hover:bg-slate-50']">
+                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                RAG 检索对比
+            </a>
+        </nav>
         
-        <div class="flex gap-2 mb-6">
-            <input 
-                v-model="keyword" 
-                @keyup.enter="generateQuestion"
-                type="text" 
-                placeholder="请输入知识点（例如：装饰器、列表推导式、二叉树）" 
-                class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-            <button 
-                @click="generateQuestion" 
-                :disabled="loading"
-                class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
-            >
-                {{ loading ? '生成中...' : '生成题目' }}
-            </button>
+        <div class="p-4 border-t border-slate-200 text-xs text-slate-400 text-center">
+            &copy; 2026 XDU Computer Science
         </div>
+    </aside>
 
-        <!-- 题目显示区域 -->
-        <div v-if="questionData" class="animate-fade-in">
-            <!-- 题目内容 -->
-            <div class="bg-blue-50 p-4 rounded-lg mb-4">
-                <div class="font-medium text-lg mb-2">题目：</div>
-                <!-- 使用 v-html 渲染 Markdown -->
-                <div v-html="renderMarkdown(questionData.question)" class="markdown-body text-gray-800"></div>
-            </div>
-
-            <!-- 选项区域 -->
-            <div class="space-y-3 mb-6">
-                <div 
-                    v-for="(option, key) in questionData.options" 
-                    :key="key"
-                    @click="selectOption(key)"
-                    :class="[
-                        'p-3 border rounded-lg cursor-pointer transition-all flex items-center',
-                        selectedOption === key ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'border-gray-200 hover:bg-gray-50'
-                    ]"
-                >
-                    <span class="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-gray-300 mr-3 font-bold text-gray-600">
-                        {{ key }}
-                    </span>
-                    <span class="text-gray-700">{{ option }}</span>
+    <!-- 右侧内容区域 -->
+    <main class="flex-1 overflow-y-auto bg-slate-50 p-8">
+        
+        <!-- 视图 1: 学生 - 智能出题 -->
+        <div v-if="currentView === 'student_quiz'" class="max-w-3xl mx-auto">
+            <h2 class="text-2xl font-bold text-slate-800 mb-6">智能出题系统</h2>
+            <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+                <div class="flex gap-3 mb-6">
+                    <input v-model="keyword" @keyup.enter="generateQuestion" type="text" class="flex-1 border border-slate-300 rounded-md px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="输入考核知识点...">
+                    <button @click="generateQuestion" :disabled="loading" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50">
+                        {{ loading ? '生成中...' : '生成题目' }}
+                    </button>
                 </div>
-            </div>
 
-            <!-- 提交按钮 -->
-            <div v-if="!showResult" class="text-center">
-                <button 
-                    @click="submitAnswer" 
-                    :disabled="!selectedOption"
-                    class="bg-green-600 text-white px-8 py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-300"
-                >
-                    提交答案
-                </button>
-            </div>
+                <div v-if="questionData" class="animate-fade-in">
+                    <div class="mb-6">
+                        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">题目描述</span>
+                        <div v-html="renderMarkdown(questionData.question)" class="markdown-body text-slate-800"></div>
+                    </div>
 
-            <!-- 结果解析区域 -->
-            <div v-if="showResult" class="mt-6 p-5 rounded-lg border" :class="isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'">
-                <div class="flex items-center mb-3">
-                    <span class="text-2xl mr-2">{{ isCorrect ? '' : '' }}</span>
-                    <h3 class="text-lg font-bold" :class="isCorrect ? 'text-green-700' : 'text-red-700'">
-                        {{ isCorrect ? '回答正确！' : '回答错误' }}
-                    </h3>
-                </div>
-                <p class="mb-2"><strong>正确答案：</strong> {{ questionData.answer }}</p>
-                <div class="bg-white p-3 rounded border border-gray-200">
-                    <p class="font-bold text-gray-600 mb-1"> 解析：</p>
-                    <p class="text-gray-700">{{ questionData.analysis }}</p>
+                    <div class="space-y-3 mb-6">
+                        <div v-for="(opt, key) in questionData.options" :key="key" 
+                             @click="!showResult && (selectedOption = key)"
+                             :class="['p-3 border rounded-md cursor-pointer flex items-center transition-all', 
+                                      selectedOption === key ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:bg-slate-50']">
+                            <span class="w-6 h-6 rounded-full flex items-center justify-center border text-xs font-bold mr-3"
+                                  :class="selectedOption === key ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-slate-500 border-slate-300'">{{ key }}</span>
+                            <span class="text-sm text-slate-700">{{ opt }}</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between border-t border-slate-100 pt-6">
+                        <button v-if="!showResult" @click="submitAnswer" :disabled="!selectedOption" class="bg-slate-800 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-slate-900 disabled:opacity-50">提交答案</button>
+                        <div v-if="showResult" class="flex-1">
+                            <div :class="['p-4 rounded-md border', selectedOption === questionData.answer ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800']">
+                                <div class="font-bold mb-1">{{ selectedOption === questionData.answer ? '回答正确' : '回答错误' }}</div>
+                                <div class="text-sm"><span class="font-semibold">解析：</span>{{ questionData.analysis }}</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- 调试信息区 (RAG展示) -->
-    <div v-if="ragContext" class="bg-gray-800 rounded-xl shadow-lg p-6 text-gray-300 text-sm">
-        <h3 class="text-gray-400 font-bold mb-2 uppercase tracking-wider text-xs">RAG 检索到的教材原文 (Top 3)</h3>
-        <pre class="whitespace-pre-wrap font-mono bg-gray-900 p-4 rounded border border-gray-700 h-48 overflow-y-auto">{{ ragContext }}</pre>
-    </div>
+        <!-- 视图 2: 学生 - 作业批改 -->
+        <div v-if="currentView === 'student_grade'" class="max-w-3xl mx-auto">
+            <h2 class="text-2xl font-bold text-slate-800 mb-6">主观题智能批改</h2>
+            <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">题目内容</label>
+                    <textarea v-model="gradeForm.question" rows="2" class="w-full border border-slate-300 rounded-md p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">参考答案 (可选)</label>
+                    <textarea v-model="gradeForm.standard" rows="3" class="w-full border border-slate-300 rounded-md p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">学生回答</label>
+                    <textarea v-model="gradeForm.student" rows="4" class="w-full border border-slate-300 rounded-md p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+                </div>
+                <div class="pt-2">
+                    <button @click="submitGrade" :disabled="gradeLoading" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50">
+                        {{ gradeLoading ? 'AI 正在分析...' : '提交批改' }}
+                    </button>
+                </div>
 
+                <div v-if="gradeResult" class="mt-6 border-t border-slate-100 pt-6">
+                    <div class="flex items-baseline mb-4">
+                        <span class="text-3xl font-bold text-indigo-600 mr-2">{{ gradeResult.score }}</span>
+                        <span class="text-sm text-slate-500">/ 100分</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-slate-50 p-4 rounded-md border border-slate-200">
+                            <h4 class="text-xs font-bold text-slate-500 uppercase mb-2">评分理由</h4>
+                            <p class="text-sm text-slate-700">{{ gradeResult.reason }}</p>
+                        </div>
+                        <div class="bg-yellow-50 p-4 rounded-md border border-yellow-200">
+                            <h4 class="text-xs font-bold text-yellow-700 uppercase mb-2">改进建议</h4>
+                            <p class="text-sm text-yellow-800">{{ gradeResult.suggestion }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 视图 3: 教师 - 知识库管理 -->
+        <div v-if="currentView === 'teacher_manage'" class="max-w-3xl mx-auto">
+            <h2 class="text-2xl font-bold text-slate-800 mb-6">知识库管理</h2>
+            
+            <!-- 上传模块 -->
+            <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mb-6">
+                <h3 class="text-lg font-medium text-slate-900 mb-4">上传教材文档</h3>
+                <div class="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:bg-slate-50 transition-colors">
+                    <input type="file" ref="fileInput" @change="handleFileUpload" class="hidden" accept=".pdf,.txt">
+                    <div class="space-y-2">
+                        <svg class="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                        <div class="text-sm text-slate-600">
+                            <button @click="$refs.fileInput.click()" class="font-medium text-blue-600 hover:text-blue-500">点击上传</button> 
+                            或拖拽文件至此
+                        </div>
+                        <p class="text-xs text-slate-500">支持 PDF, TXT 格式</p>
+                    </div>
+                </div>
+                <div v-if="uploadStatus" :class="['mt-4 text-sm p-3 rounded', uploadStatus.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700']">
+                    {{ uploadStatus.message }}
+                </div>
+            </div>
+
+            <!-- 索引维护 -->
+            <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+                <h3 class="text-lg font-medium text-slate-900 mb-4">系统维护</h3>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="font-medium text-slate-700">重建向量索引</div>
+                        <div class="text-xs text-slate-500 mt-1">上传新文档后，需执行此操作以更新知识库。</div>
+                    </div>
+                    <button @click="triggerReindex" :disabled="reindexing" class="bg-slate-800 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-slate-900 disabled:opacity-50">
+                        {{ reindexing ? '正在重建...' : '立即重建索引' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 视图 4: 研发 - 检索对比 -->
+        <div v-if="currentView === 'dev_compare'" class="max-w-6xl mx-auto h-full flex flex-col">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-slate-800">RAG 检索效果对比</h2>
+                <div class="flex gap-2">
+                    <input v-model="keyword" @keyup.enter="generateQuestion" type="text" class="border border-slate-300 rounded-md px-3 py-1.5 text-sm w-64 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="输入测试关键词...">
+                    <button @click="generateQuestion" :disabled="loading" class="bg-blue-600 text-white px-4 py-1.5 rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50">开始测试</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-6 flex-1 min-h-0">
+                <!-- 左侧：原始检索 -->
+                <div class="bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col overflow-hidden">
+                    <div class="bg-slate-100 px-4 py-3 border-b border-slate-200 font-semibold text-sm text-slate-700 flex justify-between">
+                        <span>原始检索 (Raw Retrieval)</span>
+                        <span class="text-xs bg-slate-200 px-2 py-0.5 rounded text-slate-600">FAISS Top 3</span>
+                    </div>
+                    <div class="p-4 overflow-y-auto flex-1 space-y-3 bg-slate-50">
+                        <div v-for="(doc, i) in debugInfo.raw_docs" :key="i" class="bg-white p-3 rounded border border-slate-200 text-xs text-slate-600 leading-relaxed shadow-sm">
+                            <div class="font-bold text-slate-400 mb-1">#{{ i+1 }}</div>
+                            {{ doc }}
+                        </div>
+                        <div v-if="!debugInfo.raw_docs.length" class="text-center text-slate-400 text-sm mt-10">暂无数据</div>
+                    </div>
+                </div>
+
+                <!-- 右侧：Rerank 检索 -->
+                <div class="bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col overflow-hidden ring-2 ring-blue-500 ring-opacity-50">
+                    <div class="bg-blue-50 px-4 py-3 border-b border-blue-100 font-semibold text-sm text-blue-800 flex justify-between">
+                        <span>重排序检索 (Reranked)</span>
+                        <span class="text-xs bg-blue-100 px-2 py-0.5 rounded text-blue-700">Cross-Encoder Top 3</span>
+                    </div>
+                    <div class="p-4 overflow-y-auto flex-1 space-y-3 bg-white">
+                        <div v-for="(doc, i) in debugInfo.rerank_docs" :key="i" class="bg-blue-50/50 p-3 rounded border border-blue-100 text-xs text-slate-700 leading-relaxed shadow-sm">
+                            <div class="font-bold text-blue-400 mb-1">#{{ i+1 }}</div>
+                            {{ doc }}
+                        </div>
+                        <div v-if="!debugInfo.rerank_docs.length" class="text-center text-slate-400 text-sm mt-10">暂无数据</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
 </div>
 
 <script>
@@ -113,82 +237,171 @@
 
     createApp({
         setup() {
+            // 视图状态
+            const currentView = ref('student_quiz');
+            const API_BASE = 'http://127.0.0.1:8088'; // 确认你的端口
+
+            // 通用状态
             const keyword = ref('');
             const loading = ref(false);
+
+            // 学生-出题
             const questionData = ref(null);
-            const ragContext = ref('');
             const selectedOption = ref(null);
             const showResult = ref(false);
-            const isCorrect = ref(false);
 
-            // 解析 Markdown
-            const renderMarkdown = (text) => {
-                return marked.parse(text || '');
-            };
+            // 学生-评分
+            const gradeForm = ref({ question: '', standard: '', student: '' });
+            const gradeLoading = ref(false);
+            const gradeResult = ref(null);
 
-            // 生成题目
+            // 教师-上传
+            const uploadStatus = ref(null);
+            const reindexing = ref(false);
+
+            // 研发-调试
+            const debugInfo = ref({ raw_docs: [], rerank_docs: [] });
+
+            // 工具函数
+            const renderMarkdown = (text) => marked.parse(text || '');
+
+            // --- 核心逻辑 ---
+
+            // 1. 生成题目 (同时服务于学生界面和研发界面)
+            // --- 替换 index.html 中的 generateQuestion 函数 ---
             const generateQuestion = async () => {
-                if (!keyword.value) return alert('请输入知识点');
+                // 1. 输入校验
+                if (!keyword.value) {
+                    console.warn("[Frontend] Keyword is empty, request aborted.");
+                    alert("请输入关键词");
+                    return;
+                }
                 
+                // 2. 打印调试日志
+                console.log("[Frontend] Starting request...");
+                console.log("[Frontend] Keyword:", keyword.value);
+                console.log("[Frontend] API URL:", `${API_BASE}/generate_question`);
+
+                // 3. 重置状态
                 loading.value = true;
                 questionData.value = null;
-                selectedOption.value = null;
                 showResult.value = false;
-                ragContext.value = '';
+                selectedOption.value = null;
+                debugInfo.value = { raw_docs: [], rerank_docs: [] };
 
                 try {
-                    // 注意：这里端口号要改成你后端运行的端口 (8088)
-                    const res = await fetch('http://127.0.0.1:8088/generate_question', {
+                    const res = await fetch(`${API_BASE}/generate_question`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ keyword: keyword.value })
                     });
                     
+                    console.log("[Frontend] Response status:", res.status);
+                    
                     const data = await res.json();
                     
                     if (data.status === 'success') {
-                        // 解析后端返回的 JSON 字符串
-                        const aiContent = JSON.parse(data.data);
-                        questionData.value = aiContent;
-                        ragContext.value = data.context; // 显示 RAG 原文
+                        console.log("[Frontend] Data received successfully");
+                        
+                        // 解析题目数据
+                        try {
+                            // 兼容处理：如果后端返回的是字符串则解析，如果是对象则直接使用
+                            const parsedData = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
+                            questionData.value = parsedData;
+                        } catch (e) {
+                            console.error("[Frontend] JSON parse error:", e);
+                            console.error("[Frontend] Raw data:", data.data);
+                            alert("题目数据解析失败，请查看控制台");
+                            return;
+                        }
+                        
+                        // 填充调试信息
+                        if (data.debug_info) {
+                            debugInfo.value = data.debug_info;
+                        } else {
+                            console.warn("[Frontend] debug_info is missing in response");
+                        }
                     } else {
-                        alert('生成失败：' + data.detail);
+                        console.error("[Frontend] Backend error:", data.detail);
+                        alert('服务端错误: ' + data.detail);
                     }
                 } catch (e) {
-                    alert('连接后端失败，请检查端口是否为 8088');
-                    console.error(e);
+                    console.error("[Frontend] Network error:", e);
+                    alert('连接失败，请检查后端服务是否启动 (端口 8088)');
                 } finally {
                     loading.value = false;
                 }
             };
 
-            // 选择选项
-            const selectOption = (key) => {
-                if (!showResult.value) {
-                    selectedOption.value = key;
+            const submitAnswer = () => showResult.value = true;
+
+            // 2. 提交评分
+            const submitGrade = async () => {
+                if (!gradeForm.value.student) return alert('请填写学生回答');
+                gradeLoading.value = true;
+                try {
+                    const res = await fetch(`${API_BASE}/grade_answer`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            question: gradeForm.value.question,
+                            standard_answer: gradeForm.value.standard,
+                            student_answer: gradeForm.value.student
+                        })
+                    });
+                    const data = await res.json();
+                    if (data.status === 'success') {
+                        gradeResult.value = data.data;
+                    }
+                } catch (e) {
+                    alert('评分请求失败');
+                } finally {
+                    gradeLoading.value = false;
                 }
             };
 
-            // 提交答案
-            const submitAnswer = () => {
-                if (!selectedOption.value) return;
-                showResult.value = true;
-                // 简单的判断逻辑
-                isCorrect.value = selectedOption.value === questionData.value.answer;
+            // 3. 文件上传
+            const handleFileUpload = async (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    const res = await fetch(`${API_BASE}/upload_doc`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await res.json();
+                    uploadStatus.value = { type: 'success', message: data.message };
+                } catch (e) {
+                    uploadStatus.value = { type: 'error', message: '上传失败' };
+                }
+            };
+
+            // 4. 重建索引
+            const triggerReindex = async () => {
+                if (!confirm('重建索引可能需要几分钟，确定执行吗？')) return;
+                reindexing.value = true;
+                try {
+                    const res = await fetch(`${API_BASE}/reindex_kb`, { method: 'POST' });
+                    const data = await res.json();
+                    alert(data.message);
+                } catch (e) {
+                    alert('请求失败');
+                } finally {
+                    reindexing.value = false;
+                }
             };
 
             return {
-                keyword,
-                loading,
-                questionData,
-                ragContext,
-                selectedOption,
-                showResult,
-                isCorrect,
-                generateQuestion,
-                selectOption,
-                submitAnswer,
-                renderMarkdown
+                currentView, keyword, loading,
+                questionData, selectedOption, showResult,
+                gradeForm, gradeLoading, gradeResult,
+                uploadStatus, reindexing, debugInfo,
+                generateQuestion, submitAnswer, submitGrade, 
+                handleFileUpload, triggerReindex, renderMarkdown
             };
         }
     }).mount('#app');

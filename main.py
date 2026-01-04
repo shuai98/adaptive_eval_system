@@ -9,6 +9,10 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from fastapi.middleware.cors import CORSMiddleware
 from sentence_transformers import CrossEncoder
+import shutil
+from fastapi import UploadFile, File, BackgroundTasks
+# 引入初始化逻辑 (确保 init_rag.py 在同一目录下)
+from init_rag import init_local_rag
 
 app = FastAPI()
 
@@ -156,15 +160,29 @@ async def generate_question(request: QuestionRequest):
         # 3. 打印出来看看（方便调试）
         print(f"AI 返回清洗后的内容: {content[:50]}...")
 
+
+        #以下两个变量是为了方便前端展示两种检索结果而返回的
+        #1. 提取“原始检索”内容 (从 initial_docs 里拿)
+        raw_docs_list = [doc.page_content for doc in initial_docs[:3]]
+        #2. 提取“Rerank 后”内容 (从 final_docs 里拿)
+        rerank_docs_list = [doc.page_content for doc in final_docs]
+
         return {
             "status": "success", 
             "data": content,  # <--- 注意：这里返回清洗后的 content
-            "context": context 
+            "context": context,
+            "debug_info": {         
+                "raw_docs": raw_docs_list,
+                "rerank_docs": rerank_docs_list
+            }
         }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
+
+
 
 @app.post("/grade_answer")
 async def grade_answer(request: GradeRequest):
@@ -227,3 +245,40 @@ async def grade_answer(request: GradeRequest):
     except Exception as e:
         print(f"评分出错: {str(e)}")
         raise HTTPException(status_code=500, detail=f"评分失败: {str(e)}")
+    
+
+
+@app.post("/upload_doc")
+async def upload_document(file: UploadFile = File(...)):
+    """
+    教师端接口：上传教材文档(PDF/TXT)到服务器
+    """
+    try:
+        # 确保 docs 目录存在
+        save_dir = "docs"
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        
+        file_path = os.path.join(save_dir, file.filename)
+        
+        # 保存文件
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
+        return {"status": "success", "message": f"文件 {file.filename} 上传成功"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"上传失败: {str(e)}")
+
+
+
+@app.post("/reindex_kb")
+async def reindex_knowledge_base(background_tasks: BackgroundTasks):
+    """
+    教师端接口：触发知识库重建 (异步执行，防止前端超时)
+    """
+    try:
+        # 使用后台任务运行耗时的索引构建
+        background_tasks.add_task(init_local_rag)
+        return {"status": "success", "message": "索引重建任务已在后台启动，请稍后测试检索功能"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"重建索引失败: {str(e)}")
