@@ -387,5 +387,24 @@ Live Server 以为我修改了代码，于是自动帮我刷新了浏览器
 5.RAGAS 自动化评测
 6.压力测试：使用 Locust 或 JMeter 模拟 50 个学生同时点击“生成题目”
 ---------------------------------------------------------------------
+评估：
+![alt text](image-34.png)
 
+在看到DataWhale这张图片后：![alt text](image-35.png)
+我觉得应该说明一下，我的RAG系统使用的是混合加载器策略，针对不同的文件类型使用了不同的加载器
+.txt使用TextLoader
+pdf使用PyPDFLoader
+后续可以仿照DataWhale使用Unstructured
+因为它功能更强一点：![alt text](image-36.png)
+
+我的系统就使用了这个分块方法：![alt text](image-37.png)
+
+我的系统现在是这个策略：![alt text](image-39.png)
+能不能用上输出解释器来格式化输出呢：
+![alt text](image-38.png)，如OutputParsers
+Function Calling看起来也很棒呢
+![alt text](image-40.png)
+
+通过对比，查资料，最终选择使用RAGAS评估我的系统（需要对比）
+![alt text](image-41.png)
 

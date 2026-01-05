@@ -1,150 +1,123 @@
+'''
+上个版本使用了传统的字符串解析方法来获取模型输出，存在一定的解析失败风险。
+这个版本使用Function Calling来实现结构化输出。
+DeepSeek的Function Calling类似于OpenAI的Function Calling，可以让我们强制模型输出符合特定的JSON结构。
+这样可以大大减少解析错误的概率。
+'''
+
+
 import os
-import json
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
+from pydantic import BaseModel, Field
+from typing import Optional, Dict
 
 load_dotenv()
 
+# --- 1. 定义数据结构 (Schema) ---
+# 这部分和刚才一样，Pydantic 是通用的
+class QuizOutput(BaseModel):
+    """生成的题目信息"""
+    question: str = Field(description="题目的具体描述或场景描述")
+    options: Optional[Dict[str, str]] = Field(description="选项字典，如 {'A': '...', 'B': '...'}，简答题为 null")
+    answer: str = Field(description="正确答案的选项Key（如'A'）或标准参考答案文本")
+    analysis: str = Field(description="详细的解析和知识点扩展")
+
+class GradeOutput(BaseModel):
+    """评分结果信息"""
+    score: int = Field(description="0-100之间的整数评分")
+    reason: str = Field(description="具体的评分理由")
+    suggestion: str = Field(description="给学生的改进建议")
+
 class LLMService:
     def __init__(self):
+        # 初始化 LLM
         self.llm = ChatOpenAI(
             model='deepseek-chat', 
             openai_api_key=os.getenv("DEEPSEEK_API_KEY"),
             openai_api_base='https://api.deepseek.com/v1',
-            model_kwargs={"response_format": {"type": "json_object"}},
-            temperature=0.5
+            temperature=0.5,
         )
-
-    # 修改 services/llm_service.py 中的 generate_quiz 方法
-    async def generate_quiz(self, keyword, context, difficulty="中等", question_type="choice"):
         
-        # 1. 定义难度约束 (优化后的梯度)
-        if difficulty == "简单":
-            diff_instruction = """
-            【难度要求：简单 (基础概念)】
-            1. 侧重考察：定义、语法规则、关键字的作用。
-            2. 形式要求：题目中【不要】出现代码片段，或者仅出现单行代码。
-            3. 目标：考察学生是否记住了基础知识点（例如：“break语句的作用是什么？”）。
-            """
-        elif difficulty == "中等":
-            diff_instruction = """
-            【难度要求：中等 (代码理解)】
-            1. 侧重考察：一段标准代码的执行结果预测。
-            2. 形式要求：提供一段 3-5 行的常见代码逻辑。
-            3. 目标：考察学生能否正确模拟代码运行过程（例如：简单的循环计数、条件判断）。
-            """
-        else:  # 困难 (修正版：侧重逻辑陷阱，而非底层原理)
-            diff_instruction = """
-            【难度要求：困难 (逻辑陷阱)】
-            1. 侧重考察：易错点、逻辑陷阱、复合知识点应用。
-            2. 形式要求：代码中包含稍微复杂的逻辑（如：双重循环、循环中包含 if-else、break/continue 的组合使用、列表推导式）。
-            3. 目标：考察学生是否细心，能否识别代码中的“坑”（例如：循环提前结束了、变量被覆盖了等），但不要考过于冷门或底层的知识。
-            """
+        # --- 关键点：绑定结构化输出 ---
+        # 这行代码底层会自动调用 DeepSeek 的 Function Calling 能力
+        # 强制模型必须输出符合 QuizOutput 结构的 JSON
+        self.quiz_llm = self.llm.with_structured_output(QuizOutput)
+        self.grade_llm = self.llm.with_structured_output(GradeOutput)
 
-        # 2. 定义题型约束
+    async def generate_quiz(self, keyword, context, difficulty="中等", question_type="choice"):
+        # 2. 动态生成题型要求描述
         if question_type == "choice":
-            type_instruction = """
-            题型：单项选择题
-            JSON字段要求：
-            - "question": 题目描述
-            - "options": 字典 {"A": "...", "B": "...", "C": "...", "D": "..."}
-            - "answer": 正确选项 Key (如 "A")
-            - "analysis": 解析
-            """
-        elif question_type == "subjective":
-            type_instruction = """
-            题型：简答题/名词解释
-            JSON字段要求：
-            - "question": 题目描述
-            - "options": null
-            - "answer": 标准参考答案
-            - "analysis": 详细解析
-            """
+            type_desc = "单项选择题，必须包含 options 选项字典"
         elif question_type == "scenario":
-            type_instruction = """
-            题型：场景应用题
-            要求：构建一个具体的软件开发场景，询问技术选型或解决方案。
-            JSON字段要求：
-            - "question": 场景描述 + 问题
-            - "options": null
-            - "answer": 推荐方案及理由
-            - "analysis": 结合场景的解析
-            """
+            type_desc = "场景应用题，options 为 null，answer 为解决方案"
         else:
-            type_instruction = "题型：通用问答"
+            type_desc = "简答题，options 为 null，answer 为参考答案"
 
-        # 3. 构建完整 Prompt
+        # 3. 构建 Prompt
+        # 注意：现在不需要在 Prompt 里写 {format_instructions} 了！
+        # Function Calling 会自动处理格式约束。
         template = """
         你是一个严谨的编程老师。请根据提供的教材背景知识，出一道关于"{keyword}"的题目。
         
-        {diff_instruction}
-        
-        【题型配置】：
-        {type_instruction}
+        【难度等级】：{difficulty}
+        【题型要求】：{type_desc}
         
         【教材背景知识】：
         {context}
-        
-        【输出要求】：
-        1. 必须返回标准的 JSON 格式。
-        2. 题目内容必须严格遵守上述【难度要求】，确保区分度明显。
         """
         
         prompt = ChatPromptTemplate.from_template(template)
-        chain = prompt | self.llm
         
-        response = chain.invoke({
-            "context": context, 
-            "keyword": keyword,
-            "diff_instruction": diff_instruction,
-            "type_instruction": type_instruction
-        })
-        return self._clean_json(response.content)
+        # 4. 执行链
+        # prompt -> quiz_llm (带强类型约束的模型)
+        chain = prompt | self.quiz_llm
+        
+        try:
+            # result 直接就是 QuizOutput 类的实例对象，不是字符串！
+            result = chain.invoke({
+                "context": context, 
+                "keyword": keyword,
+                "difficulty": difficulty,
+                "type_desc": type_desc
+            })
+            
+            # 转成 JSON 字符串返回 (为了兼容你的前端接口)
+            # exclude_none=True 可以去掉值为 null 的字段（可选）
+            return result.json()
+            
+        except Exception as e:
+            print(f"生成失败: {e}")
+            # 兜底
+            return '{"question": "生成出错，请重试", "options": {}, "answer": "", "analysis": ""}'
 
     async def grade_answer(self, question, standard_answer, student_answer):
-        # --- 升级：评分 Prompt 增加场景应用维度 ---
         system_prompt = """
         你是一位计算机专业阅卷老师。请对学生的回答进行专业评估。
         
-        【评分维度】(总分100)：
-        1. 知识准确性 (30%)：核心概念是否理解正确。
-        2. 场景匹配度 (40%)：(针对场景题) 学生是否真正解决了场景中的问题？方案是否合理？
-           - 如果题目是场景题，学生只背诵定义而未结合场景，最高不超过 60 分。
-        3. 逻辑与完整性 (30%)：论述是否清晰，因果关系是否成立。
+        【评分维度】：准确性(40%)、完整性(30%)、逻辑性(30%)。
         
         【输入信息】：
         - 题目：{question}
         - 参考答案：{standard_answer}
         - 学生回答：{student_answer}
-        
-        【输出要求】：
-        请返回 JSON 格式：
-        - "score": (0-100的整数)
-        - "reason": (详细指出得分点和失分点，特别是场景应用方面)
-        - "suggestion": (针对薄弱环节的学习建议)
         """
         
-        # 注意：这里不需要 user_prompt 再次重复 template 里的变量，
-        # LangChain 的 ChatPromptTemplate 会自动处理。
-        # 但为了稳妥，我们用标准的 Messages 结构。
+        prompt = ChatPromptTemplate.from_template(system_prompt)
         
-        from langchain_core.messages import SystemMessage, HumanMessage
+        # 使用绑定了 GradeOutput 的模型
+        chain = prompt | self.grade_llm
         
-        messages = [
-            SystemMessage(content=system_prompt.format(
-                question=question, 
-                standard_answer=standard_answer, 
-                student_answer=student_answer
-            ))
-        ]
-        
-        response = self.llm.invoke(messages)
-        return self._clean_json(response.content)
-
-    def _clean_json(self, content):
-        if "```json" in content:
-            content = content.replace("```json", "").replace("```", "")
-        return content.strip()
+        try:
+            result = chain.invoke({
+                "question": question, 
+                "standard_answer": standard_answer, 
+                "student_answer": student_answer
+            })
+            return result.json()
+        except Exception as e:
+            print(f"评分失败: {e}")
+            return '{"score": 0, "reason": "评分异常", "suggestion": "请重试"}'
 
 llm_service = LLMService()
