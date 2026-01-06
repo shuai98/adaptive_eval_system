@@ -408,3 +408,11 @@ Function Calling看起来也很棒呢
 通过对比，查资料，最终选择使用RAGAS评估我的系统（需要对比）
 ![alt text](image-41.png)
 
+了解到知识图谱增强RAG：
+![alt text](image-42.png)
+
+我的系统架构图：notes/MyNote/Untitled diagram-2026-01-06-052357.png
+
+考虑：加入Hybrid Search
+
+我对：[Timing] embedding recall: 120ms [Timing] rerank: 430ms [Timing] llm generation: 2.1s [Timing] total: 2.7s这个日志功能很感兴趣，也想要弄流式输出，RAGAS也要（最好对比无RAG，普通RAG和加上rerank），还有并发测试也想做，但是我希望我做的这些测试什么的都可以在前端被看到，还有我的前端现在只有一个，教师和学生还有研发对比都在一个界面上，我希望我有三个界面，一个教师界面，只做教师的业务，一个学生界面，只做学生的业务，还有一个管理端，可以看到测试数据，管理学生教师等功能
