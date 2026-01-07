@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 
 # --- 关键修改：从 database.py 导入 Base，而不是重新定义 ---
-from database import Base
+from backend.db.session import Base
 
 # --- 1. 用户表 (User) ---
 class User(Base):

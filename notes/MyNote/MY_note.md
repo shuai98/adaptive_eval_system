@@ -416,3 +416,24 @@ Function Calling看起来也很棒呢
 考虑：加入Hybrid Search
 
 我对：[Timing] embedding recall: 120ms [Timing] rerank: 430ms [Timing] llm generation: 2.1s [Timing] total: 2.7s这个日志功能很感兴趣，也想要弄流式输出，RAGAS也要（最好对比无RAG，普通RAG和加上rerank），还有并发测试也想做，但是我希望我做的这些测试什么的都可以在前端被看到，还有我的前端现在只有一个，教师和学生还有研发对比都在一个界面上，我希望我有三个界面，一个教师界面，只做教师的业务，一个学生界面，只做学生的业务，还有一个管理端，可以看到测试数据，管理学生教师等功能
+
+
+问题：登录界面打开以后输入账号密码后跳到一个界面，上面写Cannot GET /static/student/index.html
+![alt text](image-43.png)
+这个因为我是在 VS Code 里右键点击 HTML 文件然后选 "Open with Live Server" 打开的
+
+问题：出题请求 - 模式: adaptive, 判定难度: 中等, 题型: choice
+生成失败: Error code: 400 - {'error': {'message': 'This response_format type is unavailable now', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_request_error'}}
+![alt text](image-44.png)
+原因：json解析错误，
+LangChain 默认以为你在用 OpenAI 的最新模型（如 GPT-4o），所以它默认采用了 OpenAI Structured Outputs 模式（即在后台自动加上 response_format: { "type": "json_schema" }）。
+冲突：DeepSeek 目前还不支持 json_schema 这种最新的 OpenAI 格式，它只支持标准的 Tool Calling (工具调用)。
+结果：DeepSeek 服务器收到请求，发现不支持的 response_format，直接报 400 错误。
+解决：修改llm_service.py，在调用 with_structured_output 时，加上 method="function_calling" 参数
+
+
+
+问题：生成的题目都好相似，学生端没有历史记录，性能监控没开始（我希望能做出炫酷的图）
+
+
+反思，温度设置过低，导致LLM输出的问题严格按照筛选出来的片段出题，同时导致了出题雷同

@@ -4,10 +4,10 @@ from pydantic import BaseModel
 from typing import Optional
 import json
 
-from database import get_db
-from models import QuestionHistory, ExamRecord
-from services.rag_service import rag_service
-from services.llm_service import llm_service
+from backend.db.session import get_db
+from backend.models.tables import QuestionHistory, ExamRecord
+from backend.services.rag_service import rag_service
+from backend.services.llm_service import llm_service
 
 router = APIRouter(prefix="/student", tags=["学生模块"])
 
@@ -101,12 +101,13 @@ async def generate_question(request: QuestionRequest, db: Session = Depends(get_
         new_history = QuestionHistory(
             student_id=request.student_id,
             keyword=request.keyword,
-            question_json=content,
+            question_json=json.dumps(content, ensure_ascii=False), # 转字符串存库
             difficulty=difficulty
         )
         db.add(new_history)
         db.commit()
         
+        # 修改返回值，包含 debug_info
         return {
             "status": "success", 
             "data": content,
@@ -141,7 +142,7 @@ async def grade_answer(request: GradeRequest, db: Session = Depends(get_db)):
                 request.standard_answer, 
                 request.student_answer
             )
-            result_json = json.loads(content)
+            result_json = content  # 已经是字典格式
             final_score = result_json.get("score", 0)
             comment = result_json.get("suggestion", "")
 

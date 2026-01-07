@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>系统登录</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
+        /* 滑块样式保持不变 */
+        .slider-container { position: relative; width: 100%; height: 40px; background-color: #e2e8f0; border-radius: 4px; text-align: center; line-height: 40px; font-size: 12px; color: #64748b; user-select: none; overflow: hidden; }
+        .slider-bg { position: absolute; left: 0; top: 0; height: 100%; background-color: #10b981; z-index: 1; width: 0; }
+        .slider-text { position: relative; z-index: 10; pointer-events: none; }
+        .slider-btn { position: absolute; top: 0; left: 0; width: 40px; height: 40px; background-color: #fff; border: 1px solid #cbd5e1; cursor: move; z-index: 20; border-radius: 4px; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body class="h-screen flex items-center justify-center">
+    <div id="app" class="bg-white p-8 rounded-lg shadow-lg w-96 border border-slate-200">
+        <h2 class="text-2xl font-bold text-slate-800 mb-6 text-center">自适应测评系统</h2>
+        
+        <div class="space-y-5">
+            <div>
+                <label class="block text-xs font-bold text-slate-500 mb-1">用户名</label>
+                <input v-model="form.username" type="text" class="w-full border border-slate-300 rounded p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 mb-1">密码</label>
+                <input v-model="form.password" type="password" class="w-full border border-slate-300 rounded p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+
+            <!-- 新增：角色选择 (仅注册时显示) -->
+            <div v-if="isRegister" class="animate-fade-in">
+                <label class="block text-xs font-bold text-slate-500 mb-2">选择身份</label>
+                <div class="flex gap-4">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" v-model="form.role" value="student" class="mr-2 accent-blue-600">
+                        <span class="text-sm text-slate-700">我是学生</span>
+                    </label>
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" v-model="form.role" value="teacher" class="mr-2 accent-blue-600">
+                        <span class="text-sm text-slate-700">我是老师</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 滑块验证 -->
+            <div>
+                <label class="block text-xs font-bold text-slate-500 mb-1">安全验证</label>
+                <div class="slider-container" ref="sliderContainer">
+                    <div class="slider-bg" :style="{ width: sliderWidth + 'px' }"></div>
+                    <div class="slider-text" v-if="!isVerified">拖动滑块至最右侧</div>
+                    <div class="slider-text text-white font-bold" v-else>验证通过</div>
+                    <div class="slider-btn" @mousedown="startDrag" :style="{ left: sliderLeft + 'px' }">
+                        <span v-if="isVerified" class="text-green-600 font-bold">OK</span>
+                        <span v-else class="text-slate-400">></span>
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" @click="handleAuth" :disabled="loading || !isVerified" :class="['w-full py-2 rounded text-sm font-bold text-white transition-colors', isVerified ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-300 cursor-not-allowed']">
+                {{ loading ? '处理中...' : (isRegister ? '注册账号' : '登录系统') }}
+            </button>
+        </div>
+
+        <div class="mt-6 text-center text-xs text-blue-600 cursor-pointer hover:underline" @click="toggleMode">
+            {{ isRegister ? '已有账号？去登录' : '没有账号？去注册' }}
+        </div>
+    </div>
+
+    <script>
+        const { createApp, reactive, ref } = Vue;
+        const API_BASE = 'http://127.0.0.1:8088';
+
+        createApp({
+            setup() {
+                // 默认角色为 student
+                const form = reactive({ username: '', password: '', role: 'student' });
+                const isRegister = ref(false);
+                const loading = ref(false);
+                
+                // 滑块逻辑 (保持不变)
+                const sliderContainer = ref(null);
+                const isVerified = ref(false);
+                const sliderLeft = ref(0);
+                const sliderWidth = ref(0);
+                let isDragging = false;
+                let startX = 0;
+
+                const startDrag = (e) => {
+                    if (isVerified.value) return;
+                    e.preventDefault();
+                    isDragging = true;
+                    startX = e.clientX;
+                    document.addEventListener('mousemove', onDrag);
+                    document.addEventListener('mouseup', stopDrag);
+                };
+
+                const onDrag = (e) => {
+                    if (!isDragging) return;
+                    const maxMove = sliderContainer.value.offsetWidth - 40;
+                    let moveX = e.clientX - startX;
+                    if (moveX < 0) moveX = 0;
+                    if (moveX > maxMove) moveX = maxMove;
+                    sliderLeft.value = moveX;
+                    sliderWidth.value = moveX;
+                    if (moveX >= maxMove) {
+                        isVerified.value = true;
+                        stopDrag();
+                    }
+                };
+
+                const stopDrag = () => {
+                    isDragging = false;
+                    document.removeEventListener('mousemove', onDrag);
+                    document.removeEventListener('mouseup', stopDrag);
+                    if (!isVerified.value) {
+                        sliderLeft.value = 0;
+                        sliderWidth.value = 0;
+                    }
+                };
+
+                const toggleMode = () => {
+                    isRegister.value = !isRegister.value;
+                    isVerified.value = false;
+                    sliderLeft.value = 0;
+                    sliderWidth.value = 0;
+                    // 切换模式时重置角色
+                    form.role = 'student';
+                };
+
+                const handleAuth = async () => {
+                    if(!form.username || !form.password) return alert("请输入完整信息");
+                    loading.value = true;
+                    const endpoint = isRegister.value ? '/register' : '/login';
+                    
+                    try {
+                        const res = await fetch(`${API_BASE}${endpoint}`, {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify(form)
+                        });
+                        const data = await res.json();
+                        
+                        if (data.status === 'success') {
+                            if (isRegister.value) {
+                                alert("注册成功，请登录");
+                                toggleMode();
+                            } else {
+                                localStorage.setItem('user_info', JSON.stringify({
+                                    id: data.user_id,
+                                    username: data.username,
+                                    role: data.role
+                                }));
+                                
+                                // 跳转逻辑
+                                if (data.role === 'admin') {
+                                    window.location.href = '/static/admin/index.html';
+                                } else if (data.role === 'teacher') {
+                                    window.location.href = '/static/teacher/index.html';
+                                } else {
+                                    window.location.href = '/static/student/index.html';
+                                }
+                            }
+                        } else {
+                            alert(data.detail || '操作失败');
+                            isVerified.value = false;
+                            sliderLeft.value = 0;
+                            sliderWidth.value = 0;
+                        }
+                    } catch (e) { alert('连接服务器失败'); } 
+                    finally { loading.value = false; }
+                };
+
+                return { form, isRegister, loading, isVerified, sliderContainer, sliderLeft, sliderWidth, startDrag, toggleMode, handleAuth };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

@@ -1,8 +1,12 @@
 import os
-from database import engine, Base
-from models import User
+from backend.db.session import engine, Base
+from backend.models.tables import User
 # 导入 passlib 进行密码加密
 from passlib.context import CryptContext
+import sys
+import os
+# 把项目根目录加入 python 路径，否则找不到 backend
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
@@ -18,7 +22,7 @@ def reset_database():
     print("数据库表结构创建完成")
 
     # 3. 创建管理员账号 (admin / 123456)
-    from database import SessionLocal
+    from backend.db.session import SessionLocal
     db = SessionLocal()
     
     # 检查 admin 是否存在

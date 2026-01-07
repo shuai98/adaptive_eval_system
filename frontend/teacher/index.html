@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>教师管理端</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 h-screen p-10">
+    <div id="app" class="max-w-3xl mx-auto">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold text-slate-800">👨‍🏫 教师管理控制台</h1>
+            <button @click="logout" class="text-red-500 hover:underline">退出</button>
+        </div>
+
+        <!-- 知识库管理 -->
+        <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-200 text-center">
+            <div class="text-4xl mb-4">📚</div>
+            <h3 class="text-xl font-bold text-slate-800 mb-2">知识库维护</h3>
+            <p class="text-slate-500 mb-8">上传最新的教材 PDF，系统将自动进行解析和向量化。</p>
+            
+            <div class="flex justify-center gap-4">
+                <label class="cursor-pointer bg-blue-50 text-blue-600 px-6 py-3 rounded-lg font-bold hover:bg-blue-100 transition-colors">
+                    <span>📄 选择文件上传</span>
+                    <input type="file" @change="upload" class="hidden" accept=".pdf,.txt">
+                </label>
+                
+                <button type="button" @click="reindex" :disabled="reindexing" class="bg-slate-800 text-white px-6 py-3 rounded-lg font-bold hover:bg-slate-900 disabled:opacity-50">
+                    {{ reindexing ? '重建中...' : '🔄 重建索引' }}
+                </button>
+            </div>
+            
+            <div v-if="msg" :class="['mt-6 p-3 rounded-lg text-sm', msgType === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700']">
+                {{ msg }}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted } = Vue;
+        const API_BASE = 'http://127.0.0.1:8088';
+
+        createApp({
+            setup() {
+                const msg = ref('');
+                const msgType = ref('');
+                const reindexing = ref(false);
+
+                onMounted(() => {
+                    const stored = localStorage.getItem('user_info');
+                    if (!stored) window.location.href = '/static/login.html';
+                    const user = JSON.parse(stored);
+                    if (user.role !== 'teacher') {
+                        alert('无权访问');
+                        window.location.href = '/static/student/index.html';
+                    }
+                });
+
+                const upload = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    try {
+                        const res = await fetch(`${API_BASE}/teacher/upload_doc`, {method: 'POST', body: formData});
+                        const data = await res.json();
+                        showMsg(data.message, 'success');
+                    } catch(e) { showMsg('上传失败', 'error'); }
+                };
+
+                const reindex = async () => {
+                    if(!confirm('确定重建索引吗？耗时较长。')) return;
+                    reindexing.value = true;
+                    try {
+                        const res = await fetch(`${API_BASE}/teacher/reindex_kb`, {method: 'POST'});
+                        showMsg('重建任务已在后台启动', 'success');
+                    } catch(e) { showMsg('请求失败', 'error'); } 
+                    finally { reindexing.value = false; }
+                };
+
+                const showMsg = (text, type) => {
+                    msg.value = text;
+                    msgType.value = type;
+                    setTimeout(() => msg.value = '', 3000);
+                };
+
+                const logout = () => {
+                    localStorage.removeItem('user_info');
+                    // --- 关键修改：退出后回到根目录下的 login.html ---
+                    window.location.href = '/static/login.html';
+                };
+
+                return { upload, reindex, reindexing, msg, msgType, logout };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

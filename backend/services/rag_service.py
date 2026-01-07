@@ -21,10 +21,15 @@ class RAGService:
             encode_kwargs={'normalize_embeddings': True}
         )
 
-        print("[System] Loading FAISS Index...")
+        # 动态获取路径：从当前文件往上找3层，进入 data/faiss_index
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.abspath(os.path.join(current_dir, "../.."))
+        index_path = os.path.join(project_root, "data", "faiss_index")
+
+        print(f"[System] Loading FAISS Index from: {index_path}")
         try:
             self.vector_db = FAISS.load_local(
-                folder_path="./faiss_index", 
+                folder_path=index_path, 
                 embeddings=self.embeddings,
                 allow_dangerous_deserialization=True
             )
