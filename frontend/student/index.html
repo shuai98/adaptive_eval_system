@@ -11,16 +11,21 @@
         .markdown-body p { margin-bottom: 0.5em; line-height: 1.6; }
         .markdown-body pre { background: #f1f5f9; padding: 10px; border-radius: 4px; overflow-x: auto; border: 1px solid #e2e8f0; }
         .markdown-body code { color: #ef4444; background-color: #f3f4f6; padding: 2px 4px; border-radius: 4px; }
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
 <body class="h-screen flex flex-col">
-    <div id="app" class="flex-1 flex flex-col max-w-5xl mx-auto w-full p-6">
+    <div id="app" class="flex-1 flex flex-col max-w-7xl mx-auto w-full p-6">
         
         <!-- 顶部栏 -->
         <div class="flex justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
             <div>
                 <h1 class="text-xl font-bold text-slate-800 flex items-center">
-                    <span class="text-2xl mr-2">📝</span> 在线答题系统
+                    <span class="text-2xl mr-2">🎓</span> 自适应学习系统
                 </h1>
                 <p class="text-xs text-slate-500 mt-1 ml-9">当前用户: <span class="font-bold text-blue-600">{{ user.username }}</span></p>
             </div>
@@ -34,38 +39,44 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-0">
             
-            <!-- 左侧：出题配置 (占 4/12) -->
-            <div class="lg:col-span-4 space-y-6 overflow-y-auto pr-1">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <h2 class="text-sm font-bold text-slate-700 mb-5 uppercase tracking-wider border-b pb-2">⚙️ 出题配置</h2>
+            <!-- 左侧：功能导航与配置 (占 3/12) -->
+            <div class="lg:col-span-3 flex flex-col gap-4">
+                
+                <!-- 1. 模式切换 Tab (关键修改：这里控制显示哪个界面) -->
+                <div class="bg-white p-2 rounded-xl shadow-sm border border-slate-200 flex">
+                    <button 
+                        @click="switchMode('quiz')" 
+                        :class="['flex-1 py-2 text-sm font-bold rounded-lg transition-all', viewMode === 'quiz' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50']">
+                        📝 在线答题
+                    </button>
+                    <button 
+                        @click="switchMode('history')" 
+                        :class="['flex-1 py-2 text-sm font-bold rounded-lg transition-all', viewMode === 'history' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50']">
+                        🕒 历史记录
+                    </button>
+                </div>
+
+                <!-- 2. 出题配置 (仅在答题模式显示) -->
+                <div v-if="viewMode === 'quiz'" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex-1 overflow-y-auto">
+                    <h2 class="text-xs font-bold text-slate-400 mb-5 uppercase tracking-wider">参数配置</h2>
                     
                     <div class="space-y-5">
-                        <!-- 1. 知识点 -->
                         <div>
                             <label class="block text-xs font-bold text-slate-500 mb-1.5">考核知识点</label>
-                            <input 
-                                v-model="config.keyword" 
-                                @keydown.enter.prevent="generate" 
-                                type="text" 
-                                class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" 
-                                placeholder="例如：递归、装饰器"
-                            >
+                            <input v-model="config.keyword" @keydown.enter.prevent="generate" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="例如：递归">
                         </div>
 
-                        <!-- 2. 题目类型 (你要找的在这里！) -->
                         <div>
                             <label class="block text-xs font-bold text-slate-500 mb-1.5">题目类型</label>
-                            <div class="grid grid-cols-3 gap-2 bg-slate-50 p-1 rounded-lg border border-slate-200">
-                                <button v-for="t in ['choice', 'subjective', 'scenario']" :key="t" 
-                                    type="button"
-                                    @click="config.type = t"
-                                    :class="['py-2 text-xs rounded-md transition-all font-medium', config.type === t ? 'bg-white shadow text-blue-600 ring-1 ring-black/5' : 'text-slate-500 hover:text-slate-700']">
+                            <div class="grid grid-cols-1 gap-2">
+                                <button v-for="t in ['choice', 'subjective', 'scenario']" :key="t" type="button" @click="config.type = t"
+                                    :class="['py-2 px-3 text-xs rounded-md text-left border transition-all flex justify-between items-center', config.type === t ? 'bg-blue-50 border-blue-500 text-blue-700 font-bold' : 'border-slate-200 text-slate-600 hover:border-slate-300']">
                                     {{ typeName(t) }}
+                                    <span v-if="config.type === t">✓</span>
                                 </button>
                             </div>
                         </div>
 
-                        <!-- 3. 难度模式 -->
                         <div>
                             <label class="block text-xs font-bold text-slate-500 mb-1.5">难度模式</label>
                             <select v-model="config.mode" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500">
@@ -74,150 +85,146 @@
                             </select>
                         </div>
 
-                        <!-- 4. 手动难度 (仅手动模式显示) -->
                         <div v-if="config.mode === 'manual'" class="animate-fade-in">
                             <label class="block text-xs font-bold text-slate-500 mb-1.5">选择难度</label>
                             <div class="flex gap-2">
                                 <label v-for="d in ['简单', '中等', '困难']" :key="d" class="flex-1 cursor-pointer">
                                     <input type="radio" v-model="config.manualDifficulty" :value="d" class="peer sr-only">
-                                    <div class="text-center py-2 rounded-lg border border-slate-200 text-xs text-slate-500 peer-checked:bg-blue-50 peer-checked:text-blue-600 peer-checked:border-blue-200 transition-all">
-                                        {{ d }}
-                                    </div>
+                                    <div class="text-center py-2 rounded-lg border border-slate-200 text-xs text-slate-500 peer-checked:bg-blue-50 peer-checked:text-blue-600 peer-checked:border-blue-200 transition-all">{{ d }}</div>
                                 </label>
                             </div>
                         </div>
 
-                        <button type="button" @click="generate" :disabled="loading" class="w-full bg-slate-800 text-white py-3 rounded-lg text-sm font-bold hover:bg-slate-900 disabled:opacity-50 transition-all shadow-md hover:shadow-lg transform active:scale-95">
-                            {{ loading ? 'AI 正在思考中...' : '✨ 生成题目' }}
+                        <button type="button" @click="generate" :disabled="loading" class="w-full bg-slate-800 text-white py-3 rounded-lg text-sm font-bold hover:bg-slate-900 disabled:opacity-50 transition-all shadow-md hover:shadow-lg transform active:scale-95 mt-4">
+                            {{ loading ? 'AI 正在思考...' : '✨ 生成题目' }}
                         </button>
                     </div>
                 </div>
 
-                <!-- 研发对比数据 (Debug) -->
-                <div v-if="showDebug" class="bg-slate-900 text-slate-300 p-4 rounded-xl shadow-lg text-xs h-64 overflow-y-auto border border-slate-700">
-                    <div class="font-bold text-white mb-3 border-b border-slate-700 pb-2 flex justify-between">
-                        <span>🔍 RAG 检索透视</span>
-                        <span class="bg-blue-600 text-white px-1.5 rounded text-[10px]">DEV</span>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <div class="text-green-400 font-bold mb-1 flex items-center"><span class="w-2 h-2 bg-green-500 rounded-full mr-2"></span>Rerank 精选 (Top 3)</div>
-                        <div v-for="(doc, i) in debugInfo.rerank_docs" :key="i" class="mb-2 p-2 bg-slate-800 rounded border-l-2 border-green-500 leading-relaxed">
-                            {{ doc.slice(0, 80) }}...
-                        </div>
-                        <div v-if="!debugInfo.rerank_docs.length" class="italic text-slate-600">暂无数据</div>
-                    </div>
-
-                    <div>
-                        <div class="text-red-400 font-bold mb-1 flex items-center"><span class="w-2 h-2 bg-red-500 rounded-full mr-2"></span>原始检索 (Recall)</div>
-                        <div v-for="(doc, i) in debugInfo.raw_docs" :key="i" class="mb-2 p-2 bg-slate-800/50 rounded border-l-2 border-red-500 leading-relaxed opacity-70">
-                            {{ doc.slice(0, 80) }}...
-                        </div>
+                <!-- 3. 研发数据 (Debug) -->
+                <div v-if="showDebug" class="bg-slate-900 text-slate-300 p-4 rounded-xl shadow-lg text-xs h-48 overflow-y-auto border border-slate-700">
+                    <div class="font-bold text-white mb-2 border-b border-slate-700 pb-1">🔍 RAG Debug</div>
+                    <div v-if="!debugInfo.rerank_docs.length" class="italic text-slate-600">暂无数据</div>
+                    <div v-else>
+                        <div class="text-green-400 font-bold mb-1">Rerank Top 3</div>
+                        <div v-for="(doc, i) in debugInfo.rerank_docs" :key="i" class="mb-2 p-2 bg-slate-800 rounded border-l-2 border-green-500">{{ doc.slice(0, 60) }}...</div>
                     </div>
                 </div>
             </div>
 
-            <!-- 右侧：答题区域 (占 8/12) -->
-            <div class="lg:col-span-8 flex flex-col h-full">
-                <div v-if="question" class="bg-white rounded-xl shadow-sm border border-slate-200 flex-1 flex flex-col overflow-hidden animate-fade-in">
-                    <!-- 题目头部 -->
-                    <div class="bg-slate-50 p-6 border-b border-slate-100">
-                        <div class="flex justify-between items-center mb-4">
-                            <span class="bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full border border-blue-200 uppercase tracking-wide">
-                                {{ typeName(config.type) }}
-                            </span>
-                            <span class="text-xs font-bold text-slate-500 bg-white px-3 py-1 rounded-full border border-slate-200 shadow-sm">
-                                难度: <span :class="{'text-green-600': difficulty==='简单', 'text-yellow-600': difficulty==='中等', 'text-red-600': difficulty==='困难'}">{{ difficulty }}</span>
-                            </span>
-                        </div>
-                        <div v-html="renderMarkdown(question.question)" class="markdown-body text-slate-800 text-base font-medium leading-relaxed"></div>
-                    </div>
-
-                    <!-- 答题交互区 -->
-                    <div class="p-6 flex-1 overflow-y-auto">
-                        <!-- 1. 选择题 -->
-                        <div v-if="config.type === 'choice'" class="space-y-3">
-                            <div v-for="(opt, key) in question.options" :key="key" 
-                                 @click="!showResult && (selectedOption = key)"
-                                 :class="['p-4 border rounded-xl cursor-pointer flex items-center transition-all group', 
-                                          selectedOption === key ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50']">
-                                <span class="w-8 h-8 rounded-full border flex items-center justify-center text-sm font-bold mr-4 transition-colors"
-                                     :class="selectedOption === key ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-slate-500 border-slate-300 group-hover:border-blue-400'">
-                                    {{ key }}
-                                </span>
-                                <span class="text-sm text-slate-700 group-hover:text-slate-900">{{ opt }}</span>
-                            </div>
-                        </div>
-
-                        <!-- 2. 主观题 / 场景题 -->
-                        <div v-else>
-                            <textarea 
-                                v-model="studentAnswer" 
-                                rows="8" 
-                                class="w-full border border-slate-300 rounded-xl p-4 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none transition-shadow" 
-                                :placeholder="config.type === 'scenario' ? '请结合场景描述，详细阐述你的解决方案...' : '在此输入你的答案...'"
-                            ></textarea>
-                        </div>
-
-                        <!-- 提交按钮 -->
-                        <div class="mt-8 flex justify-end">
-                            <button v-if="!showResult" type="button" @click="submit" class="bg-green-600 text-white px-8 py-2.5 rounded-lg text-sm font-bold hover:bg-green-700 transition-all shadow-md hover:shadow-lg transform active:scale-95">
-                                提交答案
-                            </button>
-                        </div>
-
-                        <!-- 结果反馈 -->
-                        <div v-if="showResult" class="mt-8 pt-8 border-t border-slate-100 animate-fade-in">
-                            <!-- 选择题结果 -->
-                            <div v-if="config.type === 'choice'" :class="['p-5 rounded-xl border flex items-start', isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200']">
-                                <div class="text-2xl mr-4">{{ isCorrect ? '🎉' : '❌' }}</div>
-                                <div>
-                                    <div class="font-bold text-base mb-1" :class="isCorrect ? 'text-green-800' : 'text-red-800'">
-                                        {{ isCorrect ? '回答正确' : '回答错误' }}
-                                    </div>
-                                    <div class="text-sm text-slate-600 mt-2 bg-white/60 p-3 rounded-lg"><span class="font-bold text-slate-800">解析：</span>{{ question.analysis }}</div>
-                                </div>
-                            </div>
-                            
-                            <!-- 主观题结果 -->
-                            <div v-else-if="gradeResult" class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                                <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-                                    <span class="font-bold text-slate-700">AI 阅卷结果</span>
-                                    <div class="flex items-baseline">
-                                        <span class="text-3xl font-bold text-blue-600 mr-1">{{ gradeResult.score }}</span>
-                                        <span class="text-xs text-slate-500">/ 100</span>
-                                    </div>
-                                </div>
-                                <div class="p-6 space-y-4 text-sm">
-                                    <div>
-                                        <span class="block text-xs font-bold text-slate-400 uppercase mb-1">评分理由</span>
-                                        <p class="text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-100">{{ gradeResult.reason }}</p>
-                                    </div>
-                                    <div>
-                                        <span class="block text-xs font-bold text-yellow-600 uppercase mb-1">改进建议</span>
-                                        <p class="text-slate-700 bg-yellow-50 p-3 rounded-lg border border-yellow-100">{{ gradeResult.suggestion }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div v-else class="flex flex-col items-center justify-center py-10 text-slate-400">
-                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
-                                <p class="text-sm">AI 老师正在批改中...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <!-- 右侧：主内容区 (占 9/12) -->
+            <div class="lg:col-span-9 flex flex-col h-full overflow-hidden">
                 
-                <!-- 空状态占位 -->
-                <div v-else class="flex-1 flex flex-col items-center justify-center text-slate-400 bg-white rounded-xl border-2 border-slate-200 border-dashed">
-                    <div v-if="loading" class="text-center">
-                        <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-blue-100 border-t-blue-600 mb-4"></div>
-                        <p class="text-sm font-medium text-blue-600 animate-pulse">AI 正在阅读教材并出题...</p>
+                <!-- 视图 A: 答题界面 (与历史记录互斥) -->
+                <div v-if="viewMode === 'quiz'" class="h-full flex flex-col">
+                    <div v-if="question" class="bg-white rounded-xl shadow-sm border border-slate-200 flex-1 flex flex-col overflow-hidden animate-fade-in">
+                        <!-- 题目头部 -->
+                        <div class="bg-slate-50 p-6 border-b border-slate-100">
+                            <div class="flex justify-between items-center mb-4">
+                                <span class="bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full border border-blue-200 uppercase tracking-wide">
+                                    {{ typeName(config.type) }}
+                                </span>
+                                <span class="text-xs font-bold text-slate-500 bg-white px-3 py-1 rounded-full border border-slate-200 shadow-sm">
+                                    难度: <span :class="{'text-green-600': difficulty==='简单', 'text-yellow-600': difficulty==='中等', 'text-red-600': difficulty==='困难'}">{{ difficulty }}</span>
+                                </span>
+                            </div>
+                            <div v-html="renderMarkdown(question.question)" class="markdown-body text-slate-800 text-base font-medium leading-relaxed"></div>
+                        </div>
+
+                        <!-- 答题交互区 -->
+                        <div class="p-6 flex-1 overflow-y-auto">
+                            <!-- 选择题 -->
+                            <div v-if="config.type === 'choice'" class="space-y-3">
+                                <div v-for="(opt, key) in question.options" :key="key" 
+                                     @click="!showResult && (selectedOption = key)"
+                                     :class="['p-4 border rounded-xl cursor-pointer flex items-center transition-all group', 
+                                              selectedOption === key ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50']">
+                                    <span class="w-8 h-8 rounded-full border flex items-center justify-center text-sm font-bold mr-4 transition-colors"
+                                         :class="selectedOption === key ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-slate-500 border-slate-300 group-hover:border-blue-400'">
+                                        {{ key }}
+                                    </span>
+                                    <span class="text-sm text-slate-700 group-hover:text-slate-900">{{ opt }}</span>
+                                </div>
+                            </div>
+
+                            <!-- 主观题 -->
+                            <div v-else>
+                                <textarea v-model="studentAnswer" rows="8" class="w-full border border-slate-300 rounded-xl p-4 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none transition-shadow" :placeholder="config.type === 'scenario' ? '请结合场景描述，详细阐述你的解决方案...' : '在此输入你的答案...'"></textarea>
+                            </div>
+
+                            <!-- 提交按钮 -->
+                            <div class="mt-8 flex justify-end">
+                                <button v-if="!showResult" type="button" @click="submit" class="bg-green-600 text-white px-8 py-2.5 rounded-lg text-sm font-bold hover:bg-green-700 transition-all shadow-md hover:shadow-lg transform active:scale-95">提交答案</button>
+                            </div>
+
+                            <!-- 结果反馈 -->
+                            <div v-if="showResult" class="mt-8 pt-8 border-t border-slate-100 animate-fade-in">
+                                <div v-if="config.type === 'choice'" :class="['p-5 rounded-xl border flex items-start', isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200']">
+                                    <div class="text-2xl mr-4">{{ isCorrect ? '🎉' : '❌' }}</div>
+                                    <div>
+                                        <div class="font-bold text-base mb-1" :class="isCorrect ? 'text-green-800' : 'text-red-800'">{{ isCorrect ? '回答正确' : '回答错误' }}</div>
+                                        <div class="text-sm text-slate-600 mt-2 bg-white/60 p-3 rounded-lg"><span class="font-bold text-slate-800">解析：</span>{{ question.analysis }}</div>
+                                    </div>
+                                </div>
+                                <div v-else-if="gradeResult" class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                                    <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                                        <span class="font-bold text-slate-700">AI 阅卷结果</span>
+                                        <div class="flex items-baseline"><span class="text-3xl font-bold text-blue-600 mr-1">{{ gradeResult.score }}</span><span class="text-xs text-slate-500">/ 100</span></div>
+                                    </div>
+                                    <div class="p-6 space-y-4 text-sm">
+                                        <div><span class="block text-xs font-bold text-slate-400 uppercase mb-1">评分理由</span><p class="text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-100">{{ gradeResult.reason }}</p></div>
+                                        <div><span class="block text-xs font-bold text-yellow-600 uppercase mb-1">改进建议</span><p class="text-slate-700 bg-yellow-50 p-3 rounded-lg border border-yellow-100">{{ gradeResult.suggestion }}</p></div>
+                                    </div>
+                                </div>
+                                <div v-else class="text-center py-8"><div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div><p class="text-sm text-slate-500">AI 老师正在批改中...</p></div>
+                            </div>
+                        </div>
                     </div>
-                    <div v-else class="text-center">
-                        <div class="text-4xl mb-4 opacity-50">👈</div>
-                        <p class="text-sm font-medium">请在左侧配置并生成题目</p>
+                    
+                    <!-- 空状态 -->
+                    <div v-else class="flex-1 flex flex-col items-center justify-center text-slate-400 bg-white rounded-xl border-2 border-slate-200 border-dashed">
+                        <div v-if="loading" class="text-center">
+                            <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-blue-100 border-t-blue-600 mb-4"></div>
+                            <p class="text-sm font-medium text-blue-600 animate-pulse">AI 正在阅读教材并出题...</p>
+                        </div>
+                        <div v-else class="text-center">
+                            <div class="text-4xl mb-4 opacity-50">👈</div>
+                            <p class="text-sm font-medium">请在左侧配置并生成题目</p>
+                        </div>
                     </div>
                 </div>
+
+                <!-- 视图 B: 历史记录 (与答题界面平行) -->
+                <div v-if="viewMode === 'history'" class="h-full bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden animate-fade-in">
+                    <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                        <h2 class="font-bold text-slate-700">🕒 我的做题记录</h2>
+                        <button @click="loadHistory" class="text-blue-600 text-xs hover:underline">刷新列表</button>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-0">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-slate-50 text-slate-500 font-medium sticky top-0">
+                                <tr>
+                                    <th class="px-6 py-3 border-b">时间</th>
+                                    <th class="px-6 py-3 border-b">题目摘要</th>
+                                    <th class="px-6 py-3 border-b">难度</th>
+                                    <th class="px-6 py-3 border-b text-right">得分</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <tr v-for="item in historyList" :key="item.id" class="hover:bg-slate-50 transition-colors">
+                                    <td class="px-6 py-4 text-slate-500 text-xs font-mono">{{ item.time }}</td>
+                                    <td class="px-6 py-4 text-slate-700 font-medium truncate max-w-md" :title="item.question">{{ item.question }}</td>
+                                    <td class="px-6 py-4">
+                                        <span :class="{'bg-green-100 text-green-700': item.difficulty==='简单', 'bg-yellow-100 text-yellow-700': item.difficulty==='中等', 'bg-red-100 text-red-700': item.difficulty==='困难'}" class="px-2 py-1 rounded text-xs font-bold">{{ item.difficulty }}</span>
+                                    </td>
+                                    <td class="px-6 py-4 text-right font-bold" :class="item.score >= 60 ? 'text-green-600' : 'text-red-500'">{{ item.score }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div v-if="!historyList.length" class="p-12 text-center text-slate-400 text-sm">暂无历史记录</div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -229,13 +236,8 @@
         createApp({
             setup() {
                 const user = ref({});
-                // 核心配置对象
-                const config = reactive({ 
-                    keyword: '', 
-                    type: 'choice', // 默认选择题
-                    mode: 'adaptive', 
-                    manualDifficulty: '中等' 
-                });
+                const viewMode = ref('quiz'); // 'quiz' | 'history'
+                const config = reactive({ keyword: '', type: 'choice', mode: 'adaptive', manualDifficulty: '中等' });
                 
                 const loading = ref(false);
                 const question = ref(null);
@@ -247,6 +249,7 @@
                 const gradeResult = ref(null);
                 const showDebug = ref(false);
                 const debugInfo = ref({ raw_docs: [], rerank_docs: [] });
+                const historyList = ref([]);
 
                 onMounted(() => {
                     const stored = localStorage.getItem('user_info');
@@ -254,18 +257,31 @@
                     user.value = JSON.parse(stored);
                 });
 
+                // 切换视图模式
+                const switchMode = (mode) => {
+                    viewMode.value = mode;
+                    if (mode === 'history') {
+                        loadHistory();
+                    }
+                };
+
+                const loadHistory = async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/student/history?student_id=${user.value.id}`);
+                        const data = await res.json();
+                        historyList.value = data.data;
+                    } catch(e) { console.error(e); }
+                };
+
                 const generate = async () => {
                     if(!config.keyword) return alert('请输入知识点');
-                    
-                    // --- 关键修改开始 ---
                     loading.value = true;
-                    question.value = null; // 👈 加上这一行！立刻清空旧题目
+                    question.value = null; // 清空旧题
                     showResult.value = false;
                     selectedOption.value = null;
                     studentAnswer.value = '';
                     gradeResult.value = null;
                     debugInfo.value = { raw_docs: [], rerank_docs: [] };
-                    // --- 关键修改结束 ---
 
                     try {
                         const res = await fetch(`${API_BASE}/student/generate_question`, {
@@ -318,7 +334,6 @@
                             body: JSON.stringify(payload)
                         });
                         const data = await res.json();
-                        // 只有非选择题才需要显示 AI 评语
                         if (config.type !== 'choice') gradeResult.value = data.data;
                     } catch(e) { console.error(e); }
                 };
@@ -331,7 +346,7 @@
                 const typeName = (t) => ({'choice':'选择题','subjective':'简答题','scenario':'场景题'}[t]);
                 const renderMarkdown = (t) => marked.parse(t || '');
 
-                return { user, config, loading, question, difficulty, selectedOption, studentAnswer, showResult, isCorrect, gradeResult, showDebug, debugInfo, generate, submit, logout, typeName, renderMarkdown };
+                return { user, viewMode, config, loading, question, difficulty, selectedOption, studentAnswer, showResult, isCorrect, gradeResult, showDebug, debugInfo, historyList, switchMode, loadHistory, generate, submit, logout, typeName, renderMarkdown };
             }
         }).mount('#app');
     </script>

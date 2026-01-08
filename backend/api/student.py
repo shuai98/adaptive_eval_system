@@ -8,6 +8,7 @@ from backend.db.session import get_db
 from backend.models.tables import QuestionHistory, ExamRecord
 from backend.services.rag_service import rag_service
 from backend.services.llm_service import llm_service
+from backend.models.tables import ExamRecord # 确保导入了 ExamRecord，以便保存历史记录
 
 router = APIRouter(prefix="/student", tags=["学生模块"])
 
@@ -170,3 +171,25 @@ async def grade_answer(request: GradeRequest, db: Session = Depends(get_db)):
     except Exception as e:
         print(f"Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+#历史记录接口
+@router.get("/history")
+async def get_history(student_id: int, db: Session = Depends(get_db)):
+    """
+    获取学生的做题历史
+    """
+    records = db.query(ExamRecord).filter(
+        ExamRecord.student_id == student_id
+    ).order_by(ExamRecord.created_at.desc()).limit(50).all()
+    
+    data = []
+    for r in records:
+        data.append({
+            "id": r.id,
+            "time": r.created_at.strftime("%Y-%m-%d %H:%M"),
+            "question": r.question_content[:30] + "..." if r.question_content else "未知题目",
+            "score": r.ai_score,
+            "difficulty": r.difficulty
+        })
+    
+    return {"status": "success", "data": data}

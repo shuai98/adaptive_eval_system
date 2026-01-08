@@ -28,12 +28,12 @@ class LLMService:
             model='deepseek-chat', 
             openai_api_key=os.getenv("DEEPSEEK_API_KEY"),
             openai_api_base='https://api.deepseek.com/v1',
-            temperature=0.5,
+            temperature=0.7,#温度调高一点，防止每一次出题雷同
             # 确保这里没有任何 model_kwargs
         )
         
         # 2. 绑定结构化输出 (Function Calling)
-        # 🔴 关键修复：显式指定 method="function_calling"
+        #  关键修复：显式指定 method="function_calling"
         # 这会强制 LangChain 使用 tools 参数，而不是 response_format
         self.quiz_llm = self.llm.with_structured_output(QuizOutput, method="function_calling")
         self.grade_llm = self.llm.with_structured_output(GradeOutput, method="function_calling")

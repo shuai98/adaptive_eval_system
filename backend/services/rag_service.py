@@ -2,6 +2,7 @@ import os
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from sentence_transformers import CrossEncoder
+import random
 
 class RAGService:
     def __init__(self):
@@ -56,24 +57,35 @@ class RAGService:
             print(f"[Error] Reload failed: {e}")
             return False
 
+
+
     def search(self, keyword, top_k=3):
         if not self.vector_db:
             return {"final_docs": [], "raw_docs": [], "rerank_docs": []}
 
-        # 1. 初步检索 (Recall)
-        initial_docs = self.vector_db.similarity_search(keyword, k=10)
+        # 1. 初步检索 (扩大召回范围到 15 个)
+        initial_docs = self.vector_db.similarity_search(keyword, k=15)
         
-        # 2. 重排序 (Rerank)
+        # 2. 重排序
         pairs = [[keyword, doc.page_content] for doc in initial_docs]
         scores = self.reranker.predict(pairs)
         scored_docs = sorted(zip(initial_docs, scores), key=lambda x: x[1], reverse=True)
         
-        final_docs = [doc for doc, score in scored_docs[:top_k]]
+        # 3. --- 关键修改：引入随机性 ---
+        # 取前 6 名，然后从中随机选 3 名给 LLM
+        # 这样既保证了相关性，又保证了每次的 Context 不完全一样
+        top_candidates = [doc for doc, score in scored_docs[:6]]
+        
+        # 如果候选够多，就随机选；不够就全选
+        if len(top_candidates) >= top_k:
+            final_docs = random.sample(top_candidates, top_k)
+        else:
+            final_docs = top_candidates
         
         return {
             "final_docs": final_docs,
             "raw_docs": [doc.page_content for doc in initial_docs[:3]],
-            "rerank_docs": [doc.page_content for doc in final_docs]
+            "rerank_docs": [doc.page_content for doc in final_docs] # 这里展示最终选中的
         }
 
 # 单例模式：全局只初始化一次

@@ -10,6 +10,9 @@ from backend.services.rag_service import rag_service
 from backend.api.router import api_router
 from backend.core.config import settings
 
+import socket
+from contextlib import asynccontextmanager
+
 # 初始化数据库
 Base.metadata.create_all(bind=engine)
 
@@ -29,9 +32,39 @@ def create_app() -> FastAPI:
     )
 
     # 启动事件
-    @app.on_event("startup")
-    async def startup_event():
+    # 1. 定义生命周期逻辑
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        # --- [Startup: 应用启动前执行] ---
+        # 1. 初始化 RAG 服务（加载模型、读取 FAISS 索引）
         rag_service.initialize()
+
+        # 2. 打印访问链接（你的原有逻辑）
+        port = 8088 
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            local_ip = s.getsockname()[0]
+            s.close()
+        except Exception:
+            local_ip = "127.0.0.1"
+
+        print("\n" + "="*60)
+        print("   自适应测评系统后端已启动 | System Ready (V5 Refactored)")
+        print("-" * 60)
+        print(f"   登录页面: http://127.0.0.1:{port}/static/login.html")
+        print(f"   局域网访问: http://{local_ip}:{port}/static/login.html")
+        print(f"   API 文档: http://127.0.0.1:{port}/docs")
+        print("="*60 + "\n")
+
+        yield  # 运行分界点，应用在这里保持运行
+
+        # --- [Shutdown: 应用关闭前执行] ---
+        print("正在关闭系统，清理资源...")
+        # 如果以后有数据库连接或临时文件，可以在这里清理
+
+    # 2. 初始化 FastAPI 并注入 lifespan
+    app = FastAPI(lifespan=lifespan)
 
     # 注册路由
     app.include_router(api_router)
