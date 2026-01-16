@@ -3,131 +3,284 @@
 <head>
     <meta charset="UTF-8">
     <title>研发管理控制台</title>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.staticfile.net/vue/3.3.4/vue.global.min.js"></script>
+    <script src="https://cdn.staticfile.net/echarts/5.4.3/echarts.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 ECharts 用于未来展示压测数据 -->
-    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+    <style>
+        /* 极客风滚动条 */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        
+        .code-font { font-family: 'Consolas', 'Monaco', monospace; }
+    </style>
 </head>
-<body class="bg-slate-900 text-slate-200 h-screen flex overflow-hidden font-mono">
+<body class="bg-slate-950 text-slate-300 h-screen flex overflow-hidden font-sans">
     
-    <div id="app" class="flex w-full">
+    <div id="app" class="flex w-full h-full">
+        
         <!-- 侧边栏 -->
-        <aside class="w-64 bg-slate-950 border-r border-slate-800 flex flex-col">
+        <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col flex-shrink-0">
             <div class="p-6 border-b border-slate-800">
-                <h1 class="text-lg font-bold text-blue-400">SYSTEM_ADMIN</h1>
-                <p class="text-xs text-slate-500 mt-1">V5.0.0-Build-2026</p>
+                <h1 class="text-lg font-bold text-blue-500 tracking-widest">研发控制台</h1>
+                <p class="text-xs text-slate-500 mt-1">System V5.0</p>
             </div>
+
             <nav class="flex-1 p-4 space-y-2">
-                <a @click="currentView = 'rag_debug'" :class="navClass('rag_debug')">
-                    🔍 RAG 检索透视
-                </a>
-                <a @click="currentView = 'system_monitor'" :class="navClass('system_monitor')">
-                    📈 系统性能监控
-                </a>
+                <button @click="currentView = 'debug'" :class="navClass('debug')">
+                    <span class="mr-3">🔍</span> 检索调试实验室
+                </button>
+                <button @click="currentView = 'ragas'" :class="navClass('ragas')">
+                    <span class="mr-3">⚖️</span> RAGAS 效果评测
+                </button>
+                <button @click="currentView = 'stress'" :class="navClass('stress')">
+                    <span class="mr-3">🔥</span> 系统压力测试
+                </button>
             </nav>
+
             <div class="p-4 border-t border-slate-800">
-                <button @click="logout" class="text-red-400 hover:text-red-300 text-sm">Log Out</button>
+                <button @click="logout" class="w-full border border-red-900/50 text-red-500 hover:bg-red-900/20 py-2 rounded text-xs transition-colors">
+                    退出登录
+                </button>
             </div>
         </aside>
 
         <!-- 主内容 -->
-        <main class="flex-1 flex flex-col h-full overflow-hidden">
-            
-            <!-- 视图 1: RAG 检索透视 (核心亮点) -->
-            <div v-if="currentView === 'rag_debug'" class="flex-1 flex flex-col p-6 overflow-hidden">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl font-bold text-white">检索增强生成 (RAG) 调试器</h2>
-                    <div class="flex gap-3">
-                        <input v-model="keyword" @keydown.enter.prevent="testRetrieval" type="text" class="bg-slate-800 border border-slate-700 rounded px-4 py-2 text-sm w-80 focus:ring-1 focus:ring-blue-500 outline-none text-white" placeholder="输入测试关键词 (如: 装饰器)">
-                        <button type="button" @click="testRetrieval" :disabled="loading" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded text-sm font-bold transition-colors disabled:opacity-50">
-                            {{ loading ? 'ANALYZING...' : 'EXECUTE' }}
+        <main class="flex-1 flex flex-col h-full overflow-hidden relative">
+            <!-- 背景网格 -->
+            <div class="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:40px_40px] opacity-10 pointer-events-none"></div>
+
+            <!-- 视图 1: 调试实验室 -->
+            <div v-if="currentView === 'debug'" class="flex-1 flex flex-col p-6 overflow-hidden z-10">
+                <div class="flex justify-between items-end mb-6 border-b border-slate-800 pb-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-white mb-1">全链路生成调试</h2>
+                        <p class="text-xs text-slate-500">实时监控 RAG 检索与 LLM 生成过程</p>
+                    </div>
+                    <div class="flex gap-0">
+                        <input v-model="keyword" @keydown.enter.prevent="runDebug" type="text" class="bg-slate-900 border border-slate-700 border-r-0 rounded-l px-4 py-2 text-sm w-80 focus:ring-0 focus:border-blue-500 outline-none text-white" placeholder="输入测试关键词 (如: 装饰器)">
+                        <button @click="runDebug" :disabled="loading" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-r text-sm font-bold transition-all disabled:opacity-50">
+                            {{ loading ? '执行中...' : '开始调试' }}
                         </button>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-6 flex-1 min-h-0">
-                    <!-- 左侧：原始检索 -->
-                    <div class="flex flex-col bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-                        <div class="bg-slate-900/50 px-4 py-3 border-b border-slate-700 flex justify-between items-center">
-                            <span class="text-xs font-bold text-slate-400 uppercase">Raw Retrieval (FAISS)</span>
-                            <span class="text-[10px] bg-slate-700 px-2 py-0.5 rounded text-slate-300">Recall: Top 10</span>
+                <!-- 性能日志 -->
+                <div v-if="debugInfo.timing_log" class="mb-6 p-3 bg-black border-l-4 border-green-500 rounded-r shadow-lg code-font text-xs flex items-center">
+                    <span class="text-green-500 mr-2">➜</span>
+                    <span class="text-green-400">{{ debugInfo.timing_log }}</span>
+                </div>
+
+                <div class="grid grid-cols-3 gap-6 flex-1 min-h-0">
+                    <!-- 原始检索 -->
+                    <div class="flex flex-col bg-slate-900/50 border border-slate-800 rounded-lg overflow-hidden">
+                        <div class="bg-slate-900 px-4 py-2 border-b border-slate-800 flex justify-between items-center">
+                            <span class="text-xs font-bold text-red-400">原始检索 (FAISS)</span>
+                            <span class="text-[10px] bg-red-900/30 text-red-300 px-2 py-0.5 rounded">Top 10</span>
                         </div>
-                        <div class="p-4 overflow-y-auto space-y-3 flex-1 custom-scrollbar">
-                            <div v-for="(doc, i) in debugInfo.raw_docs" :key="i" class="p-3 bg-slate-900/50 rounded border-l-2 border-slate-600 text-xs text-slate-400 leading-relaxed hover:bg-slate-900 transition-colors">
-                                <div class="font-bold text-slate-500 mb-1">DOC_ID: {{ i }}</div>
-                                {{ doc }}
+                        <div class="p-4 overflow-y-auto space-y-3 flex-1">
+                            <div v-for="(doc, i) in debugInfo.raw_docs" :key="i" class="p-3 bg-slate-950 border border-slate-800 rounded text-[10px] text-slate-400 leading-relaxed">
+                                <div class="font-bold text-slate-600 mb-1">文档 #{{ i+1 }}</div>
+                                {{ doc.slice(0, 150) }}...
                             </div>
-                            <div v-if="!debugInfo.raw_docs.length" class="text-center text-slate-600 text-xs mt-20">WAITING FOR INPUT...</div>
+                            <div v-if="!debugInfo.raw_docs.length" class="h-full flex items-center justify-center text-slate-700 text-xs">暂无数据</div>
                         </div>
                     </div>
 
-                    <!-- 右侧：Rerank 结果 -->
-                    <div class="flex flex-col bg-slate-800 rounded-lg border border-blue-500/30 overflow-hidden shadow-[0_0_15px_rgba(59,130,246,0.1)]">
-                        <div class="bg-blue-900/20 px-4 py-3 border-b border-blue-500/30 flex justify-between items-center">
-                            <span class="text-xs font-bold text-blue-400 uppercase">Reranked Results (Cross-Encoder)</span>
-                            <span class="text-[10px] bg-blue-900/50 text-blue-300 px-2 py-0.5 rounded border border-blue-500/30">Precision: Top 3</span>
+                    <!-- Rerank 结果 -->
+                    <div class="flex flex-col bg-slate-900/50 border border-blue-900/30 rounded-lg overflow-hidden">
+                        <div class="bg-blue-900/10 px-4 py-2 border-b border-blue-900/30 flex justify-between items-center">
+                            <span class="text-xs font-bold text-blue-400">重排序精选 (Rerank)</span>
+                            <span class="text-[10px] bg-blue-900/30 text-blue-300 px-2 py-0.5 rounded">Top 3</span>
                         </div>
-                        <div class="p-4 overflow-y-auto space-y-3 flex-1 custom-scrollbar">
-                            <div v-for="(doc, i) in debugInfo.rerank_docs" :key="i" class="p-3 bg-blue-900/10 rounded border-l-2 border-blue-500 text-xs text-slate-300 leading-relaxed hover:bg-blue-900/20 transition-colors">
-                                <div class="font-bold text-blue-500 mb-1">RANK #{{ i+1 }} <span class="ml-2 text-[10px] text-slate-500">SCORE: {{ (0.98 - i*0.05).toFixed(4) }}</span></div>
-                                {{ doc }}
+                        <div class="p-4 overflow-y-auto space-y-3 flex-1">
+                            <div v-for="(doc, i) in debugInfo.rerank_docs" :key="i" class="p-3 bg-slate-950 border border-blue-900/30 rounded text-[10px] text-slate-300 leading-relaxed relative">
+                                <div class="absolute top-0 right-0 bg-blue-600 text-white text-[9px] px-1.5 py-0.5 rounded-bl">#{{ i+1 }}</div>
+                                {{ doc.slice(0, 200) }}...
                             </div>
-                            <div v-if="!debugInfo.rerank_docs.length" class="text-center text-slate-600 text-xs mt-20">WAITING FOR INPUT...</div>
+                            <div v-if="!debugInfo.rerank_docs.length" class="h-full flex items-center justify-center text-slate-700 text-xs">暂无数据</div>
+                        </div>
+                    </div>
+
+                    <!-- LLM 输出 -->
+                    <div class="flex flex-col bg-slate-900/50 border border-purple-900/30 rounded-lg overflow-hidden">
+                        <div class="bg-purple-900/10 px-4 py-2 border-b border-purple-900/30 flex justify-between items-center">
+                            <span class="text-xs font-bold text-purple-400">模型生成结果</span>
+                            <span class="text-[10px] bg-purple-900/30 text-purple-300 px-2 py-0.5 rounded">JSON</span>
+                        </div>
+                        <div class="p-4 overflow-y-auto flex-1 bg-slate-950">
+                            <pre v-if="generatedContent" class="text-[10px] text-purple-200 whitespace-pre-wrap code-font">{{ generatedContent }}</pre>
+                            <div v-else class="h-full flex items-center justify-center text-slate-700 text-xs">等待生成...</div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 视图 2: 系统监控 (预留位置) -->
-            <div v-if="currentView === 'system_monitor'" class="flex-1 p-8 flex items-center justify-center">
-                <div class="text-center">
-                    <div class="text-6xl mb-4">🚧</div>
-                    <h3 class="text-xl font-bold text-slate-400">系统压测与监控模块</h3>
-                    <p class="text-slate-600 mt-2">Locust 压测集成开发中...</p>
+            <!-- 视图 2: RAGAS 评测 -->
+            <div v-if="currentView === 'ragas'" class="flex-1 flex flex-col p-8 z-10 overflow-y-auto">
+                <div class="flex justify-between items-center mb-8">
+                    <div>
+                        <h2 class="text-2xl font-bold text-white">RAGAS 自动化评测</h2>
+                        <p class="text-xs text-slate-500 mt-1">对比 [无 Rerank] 与 [有 Rerank] 的检索质量</p>
+                    </div>
+                    <button class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded text-sm font-bold transition-all disabled:opacity-50" @click="runRagas" :disabled="evaluating">
+                        {{ evaluating ? '评测运行中 (约20分钟)...' : '🚀 开始对比评测' }}
+                    </button>
                 </div>
+
+                <div v-if="ragasScores" class="grid grid-cols-2 gap-8 mb-8">
+                    <!-- 评分卡片 -->
+                    <div class="bg-slate-900 p-6 rounded-xl border border-slate-800">
+                        <h3 class="text-red-400 font-bold mb-4 text-sm">🔴 方案 A: 仅向量检索 (Baseline)</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-slate-950 p-3 rounded border border-slate-800 text-center">
+                                <div class="text-xs text-slate-500">忠实度 (Faithfulness)</div>
+                                <div class="text-xl font-bold text-slate-200">{{ ragasScores.no_rerank.faithfulness }}</div>
+                            </div>
+                            <div class="bg-slate-950 p-3 rounded border border-slate-800 text-center">
+                                <div class="text-xs text-slate-500">上下文精度 (Precision)</div>
+                                <div class="text-xl font-bold text-slate-200">{{ ragasScores.no_rerank.context_precision }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-slate-900 p-6 rounded-xl border border-blue-900/30">
+                        <h3 class="text-blue-400 font-bold mb-4 text-sm">🔵 方案 B: 向量 + 重排序 (Ours)</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-slate-950 p-3 rounded border border-blue-900/30 text-center">
+                                <div class="text-xs text-slate-500">忠实度 (Faithfulness)</div>
+                                <div class="text-xl font-bold text-blue-400">{{ ragasScores.with_rerank.faithfulness }}</div>
+                            </div>
+                            <div class="bg-slate-950 p-3 rounded border border-blue-900/30 text-center">
+                                <div class="text-xs text-slate-500">上下文精度 (Precision)</div>
+                                <div class="text-xl font-bold text-blue-400">{{ ragasScores.with_rerank.context_precision }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 雷达图容器 -->
+                <div id="ragasChart" class="w-full h-96 bg-slate-900 rounded-xl border border-slate-800 p-4"></div>
+                
+                <div v-if="!ragasScores && !evaluating" class="text-center text-slate-600 text-sm mt-20">
+                    请点击右上角按钮开始评测，系统将自动运行 Golden Dataset 并生成对比报告。
+                </div>
+            </div>
+
+            <!-- 视图 3: 压测 (占位) -->
+            <div v-if="currentView === 'stress'" class="flex-1 flex flex-col items-center justify-center z-10">
+                <div class="text-6xl mb-4 opacity-20">🔥</div>
+                <h2 class="text-2xl font-bold text-slate-600">系统压力测试模块</h2>
+                <p class="text-xs text-slate-700 mt-2">Locust 集成开发中...</p>
             </div>
 
         </main>
     </div>
 
     <script>
-        const { createApp, ref, onMounted } = Vue;
+        const { createApp, ref, onMounted, nextTick } = Vue;
         const API_BASE = 'http://127.0.0.1:8088';
 
         createApp({
             setup() {
-                const currentView = ref('rag_debug');
+                const currentView = ref('debug');
                 const keyword = ref('');
                 const loading = ref(false);
-                const debugInfo = ref({ raw_docs: [], rerank_docs: [] });
+                const evaluating = ref(false);
+                const debugInfo = ref({ raw_docs: [], rerank_docs: [], timing_log: '' });
+                const generatedContent = ref('');
+                const ragasScores = ref(null);
 
                 onMounted(() => {
                     const stored = localStorage.getItem('user_info');
                     if (!stored) window.location.href = '/static/login.html';
                     const user = JSON.parse(stored);
                     if (user.role !== 'admin') {
-                        alert('权限拒绝：需要 Admin 角色');
+                        alert('权限不足：需要管理员权限');
                         window.location.href = '/static/login.html';
                     }
                 });
 
-                const testRetrieval = async () => {
+                const runDebug = async () => {
                     if (!keyword.value) return;
                     loading.value = true;
-                    debugInfo.value = { raw_docs: [], rerank_docs: [] };
+                    debugInfo.value = { raw_docs: [], rerank_docs: [], timing_log: '' };
+                    generatedContent.value = '';
                     
                     try {
-                        const res = await fetch(`${API_BASE}/admin/test_retrieval`, {
+                        const res = await fetch(`${API_BASE}/admin/debug_generation`, {
                             method: 'POST',
                             headers: {'Content-Type': 'application/json'},
                             body: JSON.stringify({ keyword: keyword.value })
                         });
                         const data = await res.json();
                         if (data.status === 'success') {
-                            debugInfo.value = data.data;
-                        }
-                    } catch (e) { alert('请求失败'); } 
+                            debugInfo.value = data.data.debug_info;
+                            generatedContent.value = JSON.stringify(data.data.generated_content, null, 2);
+                        } else { alert('错误: ' + data.detail); }
+                    } catch (e) { alert('连接失败'); } 
                     finally { loading.value = false; }
+                };
+
+                const runRagas = async () => {
+                    evaluating.value = true;
+                    try {
+                        const res = await fetch(`${API_BASE}/admin/run_ragas_eval`, { method: 'POST' });
+                        const data = await res.json();
+                        if (data.status === 'success') {
+                            ragasScores.value = data.data;
+                            await nextTick();
+                            renderChart(data.data);
+                        } else { alert('评测失败: ' + data.detail); }
+                    } catch (e) { alert('网络错误'); }
+                    finally { evaluating.value = false; }
+                };
+
+                const renderChart = (scores) => {
+                    const chartDom = document.getElementById('ragasChart');
+                    const myChart = echarts.init(chartDom, 'dark');
+                    const option = {
+                        backgroundColor: 'transparent',
+                        title: { text: 'RAG 性能对比评测 (RAGAS)', left: 'center', textStyle: { color: '#94a3b8' } },
+                        legend: { bottom: 0, data: ['无 Rerank (Baseline)', '有 Rerank (Ours)'] },
+                        radar: {
+                            indicator: [
+                                { name: '忠实度 (Faithfulness)', max: 1 },
+                                { name: '答案相关性 (Relevancy)', max: 1 },
+                                { name: '上下文精度 (Precision)', max: 1 },
+                                { name: '上下文召回 (Recall)', max: 1 }
+                            ],
+                            splitArea: { areaStyle: { color: ['#1e293b', '#0f172a'] } }
+                        },
+                        series: [{
+                            type: 'radar',
+                            data: [
+                                {
+                                    value: [
+                                        scores.no_rerank.faithfulness,
+                                        scores.no_rerank.answer_relevancy,
+                                        scores.no_rerank.context_precision,
+                                        scores.no_rerank.context_recall
+                                    ],
+                                    name: '无 Rerank (Baseline)',
+                                    itemStyle: { color: '#f87171' },
+                                    areaStyle: { opacity: 0.3 }
+                                },
+                                {
+                                    value: [
+                                        scores.with_rerank.faithfulness,
+                                        scores.with_rerank.answer_relevancy,
+                                        scores.with_rerank.context_precision,
+                                        scores.with_rerank.context_recall
+                                    ],
+                                    name: '有 Rerank (Ours)',
+                                    itemStyle: { color: '#3b82f6' },
+                                    areaStyle: { opacity: 0.5 }
+                                }
+                            ]
+                        }]
+                    };
+                    myChart.setOption(option);
                 };
 
                 const logout = () => {
@@ -136,10 +289,14 @@
                 };
 
                 const navClass = (view) => {
-                    return `block px-4 py-2 rounded text-sm cursor-pointer transition-colors ${currentView.value === view ? 'bg-blue-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800'}`;
+                    const base = "block w-full text-left px-4 py-2 rounded text-sm transition-all duration-200 ";
+                    if (currentView.value === view) {
+                        return base + "bg-blue-600 text-white shadow-lg font-bold";
+                    }
+                    return base + "text-slate-500 hover:bg-slate-800 hover:text-slate-300";
                 };
 
-                return { currentView, keyword, loading, debugInfo, testRetrieval, logout, navClass };
+                return { currentView, keyword, loading, evaluating, debugInfo, generatedContent, ragasScores, runDebug, runRagas, logout, navClass };
             }
         }).mount('#app');
     </script>

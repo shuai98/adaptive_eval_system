@@ -1,0 +1,42 @@
+[
+    {
+        "question": "Python 中列表 (List) 和元组 (Tuple) 的主要区别是什么？",
+        "ground_truth": "列表是可变的 (Mutable)，使用方括号 [] 定义，通常用于存储同构数据；元组是不可变的 (Immutable)，使用圆括号 () 定义，通常用于存储异构数据或作为记录。元组由于不可变，可以作为字典的键，而列表不能。"
+    },
+    {
+        "question": "请解释 Python 中的装饰器 (Decorator) 及其作用。",
+        "ground_truth": "装饰器本质上是一个高阶函数，它接收一个函数作为参数并返回一个新的函数。它的作用是在不修改原函数代码和调用方式的前提下，动态地给函数增加功能（如日志记录、性能测试、权限校验等）。语法糖是使用 @ 符号。"
+    },
+    {
+        "question": "什么是 Python 中的 GIL (全局解释器锁)？",
+        "ground_truth": "GIL (Global Interpreter Lock) 是 CPython 解释器中的一种互斥锁机制。它保证同一时刻只有一个线程在 CPU 上执行 Python 字节码。这导致 Python 的多线程无法利用多核 CPU 进行并行计算，因此 Python 多线程适用于 I/O 密集型任务，而不适用于 CPU 密集型任务。"
+    },
+    {
+        "question": "深拷贝 (Deep Copy) 和浅拷贝 (Shallow Copy) 有什么区别？",
+        "ground_truth": "浅拷贝只复制对象本身，对于对象内部的子对象，只复制其引用（内存地址）；深拷贝会递归地复制对象及其包含的所有子对象，创建一个完全独立的新对象。修改浅拷贝中的可变子对象会影响原对象，而修改深拷贝的对象不会影响原对象。"
+    },
+    {
+        "question": "请解释 Python 中的鸭子类型 (Duck Typing)。",
+        "ground_truth": "鸭子类型是动态类型语言的一种风格。它不关注对象的类型，只关注对象是否具有特定的方法或属性。如果一个对象走起来像鸭子，叫起来像鸭子，那它就可以被当作鸭子使用。例如，只要实现了 __iter__ 方法的对象都可以被迭代，而不需要继承自 Iterable 类。"
+    },
+    {
+        "question": "Python 中的 *args 和 **kwargs 是什么意思？",
+        "ground_truth": "*args 用于传递可变数量的位置参数，它在函数内部被接收为一个元组 (Tuple)；**kwargs 用于传递可变数量的关键字参数，它在函数内部被接收为一个字典 (Dictionary)。它们允许函数接受任意数量的参数。"
+    },
+    {
+        "question": "迭代器 (Iterator) 和可迭代对象 (Iterable) 有什么区别？",
+        "ground_truth": "可迭代对象 (Iterable) 是指实现了 __iter__ 方法的对象，可以被 for 循环遍历；迭代器 (Iterator) 是指同时实现了 __iter__ 和 __next__ 方法的对象，可以通过 next() 函数逐个获取元素。所有的迭代器都是可迭代对象，但列表等可迭代对象不是迭代器。"
+    },
+    {
+        "question": "Python 中 is 和 == 的区别是什么？",
+        "ground_truth": "== 操作符用于比较两个对象的值 (Value) 是否相等；is 操作符用于比较两个对象的身份 (Identity) 是否相同，即它们是否指向内存中的同一个地址（id() 是否相同）。"
+    },
+    {
+        "question": "什么是生成器 (Generator)？它有什么优势？",
+        "ground_truth": "生成器是一种特殊的迭代器，使用 yield 关键字来返回数据。与普通函数一次性返回所有结果不同，生成器在每次调用 yield 时暂停并保存状态，下次从暂停处继续执行。优势是节省内存（惰性求值），适合处理大量数据流。"
+    },
+    {
+        "question": "请简述 Python 的垃圾回收机制 (Garbage Collection)。",
+        "ground_truth": "Python 主要使用引用计数 (Reference Counting) 机制来管理内存，当一个对象的引用计数变为 0 时，内存会被立即回收。为了解决循环引用的问题，Python 还引入了标记-清除 (Mark-Sweep) 和分代回收 (Generational Collection) 机制作为辅助。"
+    }
+]

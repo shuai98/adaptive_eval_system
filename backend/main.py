@@ -1,4 +1,6 @@
 import os
+# 这告诉程序：访问本机地址时，不要走代理！
+os.environ['NO_PROXY'] = 'localhost,127.0.0.1,0.0.0.0'
 import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
