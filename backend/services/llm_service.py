@@ -1,9 +1,10 @@
 import os
+import json
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
-from typing import Optional, Dict
+from typing import Optional, Dict, AsyncIterator
 
 load_dotenv()
 
@@ -30,6 +31,15 @@ class LLMService:
             openai_api_base='https://api.deepseek.com/v1',
             temperature=0.7,#温度调高一点，防止每一次出题雷同
             # 确保这里没有任何 model_kwargs
+        )
+        
+        # 1.5 流式输出专用（不带结构化）
+        self.llm_streaming = ChatOpenAI(
+            model='deepseek-chat',
+            openai_api_key=os.getenv("DEEPSEEK_API_KEY"),
+            openai_api_base='https://api.deepseek.com/v1',
+            temperature=0.7,
+            streaming=True  # 启用流式
         )
         
         # 2. 绑定结构化输出 (Function Calling)
@@ -75,6 +85,75 @@ class LLMService:
                 "answer": "", 
                 "analysis": str(e)
             }
+
+    async def stream_generate_quiz(
+        self, 
+        keyword: str, 
+        context: str, 
+        difficulty: str = "中等", 
+        question_type: str = "choice"
+    ) -> AsyncIterator[str]:
+        """
+        流式生成题目，逐字返回
+        """
+        if question_type == "choice":
+            type_desc = "单项选择题，必须包含4个选项（A、B、C、D）"
+            format_instruction = """
+请严格按照以下格式输出（不要有其他内容）：
+题目：[题目内容]
+A. [选项A内容]
+B. [选项B内容]
+C. [选项C内容]
+D. [选项D内容]
+答案：[正确答案的字母]
+解析：[详细解析]
+"""
+        elif question_type == "scenario":
+            type_desc = "场景应用题，给出实际问题场景"
+            format_instruction = """
+请严格按照以下格式输出：
+题目：[场景描述和问题]
+答案：[解决方案]
+解析：[思路分析]
+"""
+        else:
+            type_desc = "简答题"
+            format_instruction = """
+请严格按照以下格式输出：
+题目：[问题描述]
+答案：[参考答案]
+解析：[知识点说明]
+"""
+
+        template = """你是一个严谨的编程老师。请根据提供的教材背景知识，出一道关于"{keyword}"的题目。
+
+【难度等级】：{difficulty}
+【题型要求】：{type_desc}
+
+{format_instruction}
+
+【教材背景知识】：
+{context}
+"""
+        
+        prompt = ChatPromptTemplate.from_template(template)
+        chain = prompt | self.llm_streaming
+        
+        try:
+            # 流式调用
+            async for chunk in chain.astream({
+                "context": context,
+                "keyword": keyword,
+                "difficulty": difficulty,
+                "type_desc": type_desc,
+                "format_instruction": format_instruction
+            }):
+                # chunk.content 是每次返回的文本片段
+                if hasattr(chunk, 'content'):
+                    yield chunk.content
+                    
+        except Exception as e:
+            yield f"\n\n[生成出错: {str(e)}]"
 
     async def grade_answer(self, question, standard_answer, student_answer):
         system_prompt = """

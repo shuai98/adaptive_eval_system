@@ -1,24 +1,27 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-# 引入核心配置
 from backend.core.config import settings
 
-# 1. 使用配置中的路径
-SQLALCHEMY_DATABASE_URL = f"sqlite:///{settings.DB_PATH}"
+# 1. 使用 MySQL 连接字符串
+SQLALCHEMY_DATABASE_URL = settings.SQLALCHEMY_DATABASE_URL
 
-# 2. 创建数据库引擎
+# 2. 创建引擎
+# pool_pre_ping=True: 自动检测断开的连接并重连 (MySQL 必备)
+# pool_recycle=3600: 每小时回收连接，防止 MySQL 8小时超时断开
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    SQLALCHEMY_DATABASE_URL, 
+    pool_pre_ping=True,
+    pool_recycle=3600
 )
 
-# 3. 创建会话工厂
+# 3. 会话工厂
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# 4. 创建模型基类
+# 4. 模型基类
 Base = declarative_base()
 
-# 5. 依赖函数
+# 5. 依赖注入函数
 def get_db():
     db = SessionLocal()
     try:

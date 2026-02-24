@@ -1,42 +1,37 @@
-import os
-from backend.db.session import engine, Base
-from backend.models.tables import User
-# 导入 passlib 进行密码加密
-from passlib.context import CryptContext
 import sys
 import os
-# 把项目根目录加入 python 路径，否则找不到 backend
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
-pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+# 路径修正
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
-def reset_database():
-    print("正在重置数据库...")
+from backend.db.session import engine, Base, SessionLocal
+# 必须导入 tables，否则 Base 找不到表定义
+from backend.models.tables import User, Document, ExamRecord, QuestionHistory
+from backend.core.security import get_password_hash
+
+def init_db():
+    print("⚙️ 正在连接 MySQL 并初始化表结构...")
     
-    # 1. 如果存在旧数据库文件，建议先手动删除 app.db，或者这里强制覆盖表结构
-    # drop_all 会删除所有由 Base 定义的表
-    Base.metadata.drop_all(bind=engine)
-    
-    # 2. 创建新表
+    # 1. 建表 (如果表不存在则创建)
     Base.metadata.create_all(bind=engine)
-    print("数据库表结构创建完成")
+    print(" 数据库表结构同步完成。")
 
-    # 3. 创建管理员账号 (admin / 123456)
-    from backend.db.session import SessionLocal
+    # 2. 创建默认管理员 (root / 123456)
     db = SessionLocal()
-    
-    # 检查 admin 是否存在
-    if not db.query(User).filter(User.username == "admin").first():
-        admin_user = User(
-            username="admin",
-            password_hash=pwd_context.hash("123456"), # 加密存储
-            role="teacher"
+    if not db.query(User).filter(User.username == "root").first():
+        print("👤 正在创建管理员账号...")
+        admin = User(
+            username="root",
+            password_hash=get_password_hash("123456"),
+            role="admin"
         )
-        db.add(admin_user)
+        db.add(admin)
         db.commit()
-        print("管理员账号创建成功: admin / 123456")
+        print(" 管理员创建成功: root / 123456")
+    else:
+        print("ℹ 管理员账号已存在，跳过创建。")
     
     db.close()
 
 if __name__ == "__main__":
-    reset_database()
+    init_db()

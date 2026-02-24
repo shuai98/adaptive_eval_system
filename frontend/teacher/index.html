@@ -13,7 +13,7 @@
         .btn-logout { color: #ef4444; cursor: pointer; border: 1px solid #fee2e2; background: #fef2f2; padding: 5px 15px; border-radius: 6px; font-size: 12px; }
 
         /* 栅格布局 */
-        .main-grid { display: grid; grid-template-columns: 300px 1fr; gap: 20px; flex: 1; min-height: 0; }
+        .main-grid { display: grid; grid-template-columns: 350px 1fr; gap: 20px; flex: 1; min-height: 0; }
         
         /* 卡片通用样式 */
         .card { background: white; border-radius: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
@@ -21,27 +21,32 @@
         .card-body { padding: 20px; overflow-y: auto; flex: 1; }
 
         /* 左侧：维护区 */
-        .upload-section { display: flex; flex-direction: column; gap: 20px; }
+        .upload-section { display: flex; flex-direction: column; gap: 15px; }
         
-        /* 上传框样式修复 */
         .upload-box { 
-            display: block; /* 关键：设为块级元素 */
+            display: block; 
             border: 2px dashed #cbd5e1; 
             border-radius: 8px; 
-            padding: 30px 20px; 
+            padding: 20px; 
             text-align: center; 
             cursor: pointer; 
             transition: all 0.2s; 
             background: #f8fafc;
         }
         .upload-box:hover { border-color: var(--accent); background: #eff6ff; }
-        .upload-icon { font-size: 32px; margin-bottom: 10px; display: block; }
-        .upload-text { font-weight: bold; color: #475569; display: block; margin-bottom: 5px; }
-        .upload-sub { font-size: 12px; color: #94a3b8; display: block; }
-
-        .btn-primary { width: 100%; background: var(--primary); color: white; padding: 12px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; }
+        .upload-icon { font-size: 24px; margin-bottom: 5px; display: block; }
+        .upload-text { font-weight: bold; font-size: 13px; color: #475569; display: block; }
+        
+        .btn-primary { width: 100%; background: var(--primary); color: white; padding: 10px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; font-size: 13px; }
         .btn-primary:hover { opacity: 0.9; }
         .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; }
+
+        /* 文档列表样式 */
+        .doc-list { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 15px; }
+        .doc-title { font-size: 12px; font-weight: bold; color: #64748b; margin-bottom: 10px; }
+        .doc-item { display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding: 8px; border-bottom: 1px solid #f1f5f9; }
+        .doc-name { font-weight: 500; color: #334155; }
+        .doc-time { color: #94a3b8; font-family: monospace; }
 
         /* 右侧：表格 */
         table { width: 100%; border-collapse: collapse; font-size: 14px; }
@@ -54,11 +59,24 @@
         .score-mid { background: #fef9c3; color: #854d0e; }
         .score-low { background: #fee2e2; color: #991b1b; }
 
-        .msg { margin-top: 15px; padding: 10px; border-radius: 6px; font-size: 12px; text-align: center; }
+        .msg { margin-top: 10px; padding: 8px; border-radius: 6px; font-size: 12px; text-align: center; }
         .msg-success { background: #dcfce7; color: #166534; }
         .msg-error { background: #fee2e2; color: #991b1b; }
         
         .refresh-btn { color: var(--accent); cursor: pointer; border: none; background: none; font-size: 12px; font-weight: bold; }
+
+        /* 详情弹窗 */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: grid; place-items: center; z-index: 1000; }
+        .modal-content { background: white; border-radius: 12px; max-width: 800px; width: 90%; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+        .modal-header { padding: 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .modal-title { font-size: 18px; font-weight: 700; color: #1e293b; }
+        .modal-close { background: none; border: none; font-size: 24px; color: #94a3b8; cursor: pointer; line-height: 1; }
+        .modal-close:hover { color: #475569; }
+        .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+        .detail-item { margin-bottom: 20px; }
+        .detail-label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 8px; }
+        .detail-value { padding: 15px; background: #f8fafc; border-radius: 8px; color: #1e293b; line-height: 1.8; white-space: pre-wrap; word-wrap: break-word; }
+        table tbody tr { cursor: pointer; }
     </style>
 </head>
 <body>
@@ -66,7 +84,7 @@
         <div class="header">
             <h1>👨‍🏫 教师管理控制台</h1>
             <div style="display: flex; align-items: center; gap: 15px;">
-                <span style="font-size: 12px; color: #64748b;">管理员: {{ user.username }}</span>
+                <span style="font-size: 12px; color: #64748b;">用户: {{ user.username }}</span>
                 <button class="btn-logout" @click="logout">退出</button>
             </div>
         </div>
@@ -74,27 +92,33 @@
         <div class="main-grid">
             <!-- 左侧：维护 -->
             <div class="card">
-                <div class="card-header">📚 知识库维护</div>
+                <div class="card-header">📚 资料管理</div>
                 <div class="card-body upload-section">
                     
                     <!-- 上传按钮 -->
                     <label class="upload-box">
                         <span class="upload-icon">📄</span>
-                        <span class="upload-text">点击上传教材</span>
-                        <span class="upload-sub">支持 PDF / TXT</span>
+                        <span class="upload-text">点击上传教材 (PDF/TXT)</span>
                         <input type="file" @change="upload" hidden accept=".pdf,.txt">
                     </label>
 
                     <!-- 重建按钮 -->
-                    <div>
-                        <p style="font-size: 12px; color: #64748b; margin-bottom: 10px;">⚠️ 上传新文档后，请务必重建索引。</p>
-                        <button class="btn-primary" @click="reindex" :disabled="reindexing">
-                            {{ reindexing ? '正在重建...' : '🔄 重建向量索引' }}
-                        </button>
-                    </div>
+                    <button class="btn-primary" @click="reindex" :disabled="reindexing">
+                        {{ reindexing ? '正在重建索引...' : '🔄 重建向量索引' }}
+                    </button>
 
                     <div v-if="msg" :class="['msg', msgType === 'success' ? 'msg-success' : 'msg-error']">
                         {{ msg }}
+                    </div>
+
+                    <!-- 我的文档列表 (找回的功能) -->
+                    <div class="doc-list">
+                        <div class="doc-title">📂 我上传的文档</div>
+                        <div v-if="myDocs.length === 0" style="text-align: center; color: #cbd5e1; font-size: 12px; padding: 10px;">暂无上传记录</div>
+                        <div v-for="doc in myDocs" :key="doc.id" class="doc-item">
+                            <span class="doc-name">📄 {{ doc.name }}</span>
+                            <span class="doc-time">{{ doc.time }}</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -102,8 +126,8 @@
             <!-- 右侧：数据 -->
             <div class="card">
                 <div class="card-header">
-                    <span>📊 学情数据监控</span>
-                    <button class="refresh-btn" @click="loadData">刷新数据 ↻</button>
+                    <span>📊 全班学情监控</span>
+                    <button class="refresh-btn" @click="loadData">刷新 ↻</button>
                 </div>
                 
                 <div class="card-body" style="padding: 0;">
@@ -117,7 +141,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="record in records" :key="record.id">
+                            <tr v-for="record in records" :key="record.id" @click="showDetail(record.id)">
                                 <td style="color:#94a3b8; font-family:monospace; font-size: 12px;">{{ record.time }}</td>
                                 <td style="font-weight:bold">{{ record.student }}</td>
                                 <td style="color:#475569; max-width: 250px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ record.question }}</td>
@@ -133,6 +157,53 @@
                 </div>
             </div>
         </div>
+
+        <!-- 详情弹窗 -->
+        <div v-if="showDetailModal" class="modal-overlay" @click.self="showDetailModal = false">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">答题详情</div>
+                    <button class="modal-close" @click="showDetailModal = false">&times;</button>
+                </div>
+                <div class="modal-body" v-if="detailData">
+                    <div class="detail-item">
+                        <div class="detail-label">学生姓名</div>
+                        <div class="detail-value">{{ detailData.student }}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">答题时间</div>
+                        <div class="detail-value">{{ detailData.time }}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">难度等级</div>
+                        <div class="detail-value">
+                            <span :class="['score-badge', 'score-mid']">{{ detailData.difficulty }}</span>
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">题目内容</div>
+                        <div class="detail-value">{{ detailData.question }}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">学生答案</div>
+                        <div class="detail-value">{{ detailData.student_answer }}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">AI 评分</div>
+                        <div class="detail-value">
+                            <span style="font-size: 24px; font-weight: bold;" 
+                                  :class="detailData.score >= 80 ? 'score-high' : detailData.score >= 60 ? 'score-mid' : 'score-low'">
+                                {{ detailData.score }} 分
+                            </span>
+                        </div>
+                    </div>
+                    <div class="detail-item" v-if="detailData.comment">
+                        <div class="detail-label">AI 评语</div>
+                        <div class="detail-value">{{ detailData.comment }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -143,19 +214,25 @@
             setup() {
                 const user = ref({});
                 const records = ref([]);
+                const myDocs = ref([]); // 找回的功能
                 const msg = ref('');
                 const msgType = ref('');
                 const reindexing = ref(false);
+                const showDetailModal = ref(false);
+                const detailData = ref(null);
 
                 onMounted(() => {
                     const stored = localStorage.getItem('user_info');
                     if (!stored) window.location.href = '/static/login.html';
                     user.value = JSON.parse(stored);
+                    
                     if (user.value.role !== 'teacher' && user.value.role !== 'admin') {
                         alert('权限不足');
                         window.location.href = '/static/student/index.html';
                     }
+                    
                     loadData();
+                    loadMyDocs(); // 找回的功能
                 });
 
                 const loadData = async () => {
@@ -166,16 +243,34 @@
                     } catch(e) {}
                 };
 
+                // 找回的功能：加载文档列表
+                const loadMyDocs = async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/teacher/my_docs?teacher_id=${user.value.id}`);
+                        const data = await res.json();
+                        if (data.status === 'success') myDocs.value = data.data;
+                    } catch(e) {}
+                };
+
                 const upload = async (e) => {
                     const file = e.target.files[0];
                     if (!file) return;
+                    
                     const formData = new FormData();
                     formData.append('file', file);
+                    // 找回的功能：必须传 user_id
+                    formData.append('user_id', user.value.id);
+                    
                     showMsg('正在上传...', 'info');
                     try {
                         const res = await fetch(`${API_BASE}/teacher/upload_doc`, {method: 'POST', body: formData});
                         const data = await res.json();
-                        showMsg(data.message, data.status === 'success' ? 'success' : 'error');
+                        if (data.status === 'success') {
+                            showMsg(data.message, 'success');
+                            loadMyDocs(); // 刷新列表
+                        } else {
+                            showMsg('上传失败: ' + data.detail, 'error');
+                        }
                     } catch(e) { showMsg('网络错误', 'error'); }
                 };
 
@@ -200,7 +295,23 @@
                     window.location.href = '/static/login.html';
                 };
 
-                return { user, records, msg, msgType, reindexing, upload, reindex, loadData, logout };
+                const showDetail = async (recordId) => {
+                    try {
+                        const res = await fetch(`${API_BASE}/teacher/record_detail/${recordId}`);
+                        const data = await res.json();
+                        if (data.status === 'success') {
+                            detailData.value = data.data;
+                            showDetailModal.value = true;
+                        } else {
+                            showMsg('获取详情失败', 'error');
+                        }
+                    } catch(e) {
+                        showMsg('网络错误', 'error');
+                    }
+                };
+
+                return { user, records, myDocs, msg, msgType, reindexing, showDetailModal, detailData, 
+                        upload, reindex, loadData, logout, showDetail };
             }
         }).mount('#app');
     </script>

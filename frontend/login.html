@@ -176,8 +176,8 @@
                 <input v-model="form.password" type="password" class="input-field" placeholder="请输入密码">
             </div>
 
-            <!-- 注册时的角色选择 -->
-            <div v-if="isRegister" class="input-group">
+            <!-- 角色选择 (修复：去掉了 v-if="isRegister"，登录时也要选) -->
+            <div class="input-group">
                 <label class="input-label">选择身份</label>
                 <div class="role-group">
                     <label class="role-label">
@@ -185,6 +185,9 @@
                     </label>
                     <label class="role-label">
                         <input type="radio" v-model="form.role" value="teacher"> 教师
+                    </label>
+                    <label class="role-label">
+                        <input type="radio" v-model="form.role" value="admin"> 管理员
                     </label>
                 </div>
             </div>
@@ -284,7 +287,7 @@
                     isVerified.value = false;
                     sliderLeft.value = 0;
                     sliderWidth.value = 0;
-                    form.role = 'student';
+                    // 切换模式时不重置角色，保留用户选择
                 };
 
                 const handleAuth = async () => {

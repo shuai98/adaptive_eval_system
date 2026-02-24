@@ -1,3 +1,4 @@
+import asyncio
 import os
 import json
 import pandas as pd
@@ -42,58 +43,80 @@ class RagasService:
         data_no_rerank = {"question": [], "answer": [], "contexts": [], "ground_truth": []}
         data_with_rerank = {"question": [], "answer": [], "contexts": [], "ground_truth": []}
 
-        print("[RAGAS] 开始生成对比测试数据...")
+        # 2. 并发生成数据
+        print(f"[RAGAS] 开始并发生成对比数据 (数据集大小: {len(golden_data)})...")
         
-        for item in golden_data:
-            q = item['question']
-            gt = item['ground_truth']
-            
-            # 1. 获取检索结果
-            search_result = rag_service.search(q)
-            
-            # --- 组 A: 无 Rerank (原始 FAISS Top3) ---
-            # 🔴 修复点：search_result["raw_docs"] 已经是字符串列表了，直接用
-            docs_a = search_result["raw_docs"] 
-            context_a = "\n".join(docs_a)
-            
-            # 简单生成 (不走 Function Calling)
-            prompt_a = f"基于以下资料回答：\n{context_a}\n\n问题：{q}"
-            ans_a = llm_service.llm.invoke(prompt_a).content
-            
-            data_no_rerank["question"].append(q)
-            data_no_rerank["answer"].append(ans_a)
-            data_no_rerank["contexts"].append(docs_a)
-            data_no_rerank["ground_truth"].append(gt)
+        # 限制并发数为 3，防止触发 API Rate Limit
+        sem = asyncio.Semaphore(3)
 
-            # --- 组 B: 有 Rerank (重排序后 Top3) ---
-            # 🔴 修复点：同上，直接用
-            docs_b = search_result["rerank_docs"]
-            context_b = "\n".join(docs_b)
+        async def process_item(item):
+            async with sem:
+                q = item['question']
+                gt = item['ground_truth']
+                
+                # 1. 异步检索
+                search_result = await rag_service.search_async(q)
+                
+                # --- 组 A: 无 Rerank ---
+                docs_a = search_result["raw_docs"] 
+                context_a = "\n".join(docs_a)
+                prompt_a = f"基于以下资料回答：\n{context_a}\n\n问题：{q}"
+                
+                # 异步生成
+                resp_a = await llm_service.llm.ainvoke(prompt_a)
+                ans_a = resp_a.content
+                
+                # --- 组 B: 有 Rerank ---
+                docs_b = search_result["rerank_docs"]
+                context_b = "\n".join(docs_b)
+                prompt_b = f"基于以下资料回答：\n{context_b}\n\n问题：{q}"
+                
+                # 异步生成
+                resp_b = await llm_service.llm.ainvoke(prompt_b)
+                ans_b = resp_b.content
+                
+                return {
+                    "q": q, "gt": gt,
+                    "ans_a": ans_a, "ctx_a": docs_a,
+                    "ans_b": ans_b, "ctx_b": docs_b
+                }
+
+        # 执行并发任务
+        tasks = [process_item(item) for item in golden_data]
+        results = await asyncio.gather(*tasks)
+
+        # 整理结果
+        for res in results:
+            data_no_rerank["question"].append(res["q"])
+            data_no_rerank["answer"].append(res["ans_a"])
+            data_no_rerank["contexts"].append(res["ctx_a"])
+            data_no_rerank["ground_truth"].append(res["gt"])
             
-            prompt_b = f"基于以下资料回答：\n{context_b}\n\n问题：{q}"
-            ans_b = llm_service.llm.invoke(prompt_b).content
-            
-            data_with_rerank["question"].append(q)
-            data_with_rerank["answer"].append(ans_b)
-            data_with_rerank["contexts"].append(docs_b)
-            data_with_rerank["ground_truth"].append(gt)
+            data_with_rerank["question"].append(res["q"])
+            data_with_rerank["answer"].append(res["ans_b"])
+            data_with_rerank["contexts"].append(res["ctx_b"])
+            data_with_rerank["ground_truth"].append(res["gt"])
 
         # 2. 执行评测 (跑两次)
-        print("[RAGAS] 正在评测：无 Rerank 组...")
-        results_a = evaluate(
-            dataset=Dataset.from_dict(data_no_rerank),
-            metrics=[faithfulness, answer_relevancy, context_precision, context_recall],
-            llm=self.judge_llm,
-            embeddings=self.eval_embeddings
-        )
+        # 注意：ragas.evaluate 是同步阻塞的，且可能内部有 async 逻辑
+        # 为了不阻塞 FastAPI 主线程，我们将其放入线程池
+        loop = asyncio.get_running_loop()
 
-        print("[RAGAS] 正在评测：有 Rerank 组...")
-        results_b = evaluate(
-            dataset=Dataset.from_dict(data_with_rerank),
-            metrics=[faithfulness, answer_relevancy, context_precision, context_recall],
-            llm=self.judge_llm,
-            embeddings=self.eval_embeddings
-        )
+        def _run_eval(data):
+            return evaluate(
+                dataset=Dataset.from_dict(data),
+                metrics=[faithfulness, answer_relevancy, context_precision, context_recall],
+                llm=self.judge_llm,
+                embeddings=self.eval_embeddings
+            )
+
+        print("[RAGAS] 正在评测：无 Rerank 组 & 有 Rerank 组 (并行执行)...")
+        
+        # 并行执行两个评测任务，时间减半
+        future_a = loop.run_in_executor(None, _run_eval, data_no_rerank)
+        future_b = loop.run_in_executor(None, _run_eval, data_with_rerank)
+        
+        results_a, results_b = await asyncio.gather(future_a, future_b)
 
         # 3. 辅助函数：计算平均分
         def safe_mean(res, metric_key):

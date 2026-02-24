@@ -3,91 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <title>学生工作台</title>
+    <!-- 引入库 -->
     <script src="https://cdn.staticfile.net/vue/3.3.4/vue.global.min.js"></script>
     <script src="https://cdn.staticfile.net/marked/5.1.0/marked.min.js"></script>
-    
-    <style>
-        /* --- 全局样式 --- */
-        :root { --primary: #2563eb; --bg: #f8fafc; --text: #334155; --border: #e2e8f0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; height: 100vh; display: flex; flex-direction: column; }
-        
-        #app { display: flex; flex-direction: column; height: 100%; max-width: 1200px; margin: 0 auto; width: 100%; padding: 20px; box-sizing: border-box; }
-        
-        /* 顶部栏 */
-        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 25px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .header h1 { font-size: 20px; font-weight: 700; color: #1e293b; }
-        .btn-logout { color: #ef4444; cursor: pointer; border: none; background: none; font-size: 14px; }
-
-        .main-content { display: grid; grid-template-columns: 300px 1fr; gap: 20px; flex: 1; min-height: 0; }
-        
-        /* 左侧面板 */
-        .left-panel { display: flex; flex-direction: column; gap: 15px; }
-        
-        /* Tab 切换 */
-        .nav-tabs { display: flex; background: white; padding: 5px; border-radius: 10px; border: 1px solid var(--border); }
-        .nav-item { flex: 1; text-align: center; padding: 10px; cursor: pointer; border-radius: 6px; font-size: 14px; font-weight: 600; color: #64748b; transition: 0.2s; }
-        .nav-item.active { background: var(--primary); color: white; shadow: 0 2px 4px rgba(37,99,235,0.2); }
-
-        /* 配置区 */
-        .config-box { background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--border); }
-        .form-group { margin-bottom: 15px; }
-        .label { display: block; font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 8px; text-transform: uppercase; }
-        .input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; box-sizing: border-box; }
-        .input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(37,99,235,0.1); }
-        
-        .btn-group { display: flex; gap: 5px; background: #f1f5f9; padding: 4px; border-radius: 6px; }
-        .btn-option { flex: 1; border: none; background: none; padding: 6px; font-size: 12px; cursor: pointer; border-radius: 4px; color: #64748b; }
-        .btn-option.active { background: white; color: var(--primary); box-shadow: 0 1px 2px rgba(0,0,0,0.05); font-weight: 600; }
-        
-        .btn-primary { width: 100%; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
-        .btn-primary:hover { opacity: 0.9; }
-        .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; }
-
-        /* 右侧内容区 */
-        .content-panel { background: white; border-radius: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; height: 100%; }
-        
-        /* 答题界面 */
-        .quiz-header { background: #f8fafc; padding: 20px; border-bottom: 1px solid var(--border); }
-        .tags { display: flex; gap: 10px; margin-bottom: 10px; }
-        .tag { font-size: 12px; padding: 4px 8px; border-radius: 4px; font-weight: 600; }
-        .tag-type { background: #dbeafe; color: #1e40af; }
-        .tag-diff { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
-        
-        .quiz-body { padding: 20px; overflow-y: auto; flex: 1; }
-        .option-item { padding: 15px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; cursor: pointer; display: flex; align-items: center; transition: all 0.2s; }
-        .option-item:hover { background: #f8fafc; border-color: #cbd5e1; }
-        .option-item.selected { border-color: var(--primary); background: #eff6ff; }
-        .option-key { width: 24px; height: 24px; border: 1px solid #cbd5e1; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; margin-right: 10px; font-weight: bold; }
-        .selected .option-key { background: var(--primary); color: white; border-color: var(--primary); }
-        
-        .textarea { width: 100%; padding: 15px; border: 1px solid var(--border); border-radius: 8px; resize: none; outline: none; font-family: inherit; box-sizing: border-box; }
-        .textarea:focus { border-color: var(--primary); }
-
-        .result-box { margin-top: 20px; padding: 20px; border-radius: 8px; border: 1px solid; }
-        .result-success { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
-        .result-error { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
-        
-        /* 历史记录表格 */
-        .history-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        .history-table th { text-align: left; padding: 12px; background: #f8fafc; border-bottom: 2px solid var(--border); color: #64748b; position: sticky; top: 0; }
-        .history-table td { padding: 12px; border-bottom: 1px solid #f1f5f9; }
-        .history-table tr:hover { background: #f8fafc; }
-
-        .empty-state { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; }
-        .loading-spinner { width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        .markdown-body p { margin-bottom: 10px; line-height: 1.6; }
-        .markdown-body pre { background: #f1f5f9; padding: 10px; border-radius: 6px; overflow-x: auto; font-family: monospace; }
-        .markdown-body code { background: #f1f5f9; padding: 2px 4px; border-radius: 3px; color: #ef4444; font-family: monospace; }
-    </style>
+    <script src="https://cdn.staticfile.net/Chart.js/3.9.1/chart.min.js"></script>
+    <!-- 引入自定义样式 -->
+    <link rel="stylesheet" href="/static/student/css/main.css">
 </head>
 <body>
     <div id="app">
         <!-- 顶部 -->
         <div class="header">
             <div>
-                <h1>📝 在线答题系统</h1>
+                <h1>在线答题系统</h1>
                 <span class="user-info">当前用户: <b>{{ user.username }}</b></span>
             </div>
             <button class="btn-logout" @click="logout">退出登录</button>
@@ -99,6 +27,7 @@
                 <!-- 导航 Tab -->
                 <div class="nav-tabs">
                     <div :class="['nav-item', viewMode === 'quiz' ? 'active' : '']" @click="viewMode = 'quiz'">在线答题</div>
+                    <div :class="['nav-item', viewMode === 'stats' ? 'active' : '']" @click="loadStats">学习分析</div>
                     <div :class="['nav-item', viewMode === 'history' ? 'active' : '']" @click="loadHistory">历史记录</div>
                 </div>
 
@@ -123,8 +52,8 @@
                     <div class="form-group">
                         <label class="label">难度模式</label>
                         <select v-model="config.mode" class="input">
-                            <option value="adaptive">🤖 自适应 (推荐)</option>
-                            <option value="manual">⚙️ 固定难度</option>
+                            <option value="adaptive">自适应 (推荐)</option>
+                            <option value="manual">固定难度</option>
                         </select>
                     </div>
 
@@ -137,8 +66,8 @@
                         </div>
                     </div>
 
-                    <button class="btn-primary" @click="generate" :disabled="loading">
-                        {{ loading ? 'AI 正在出题...' : '✨ 生成题目' }}
+                    <button class="btn-primary" @click="generateStream" :disabled="loading">
+                        {{ loading ? '正在生成题目...' : '生成题目' }}
                     </button>
                 </div>
             </div>
@@ -147,22 +76,26 @@
             <div class="content-panel">
                 
                 <!-- 视图 A: 答题 -->
-                <div v-if="viewMode === 'quiz'" style="height:100%; display:flex; flex-direction:column">
+                <div v-if="viewMode === 'quiz'" style="height:100%; display:flex; flex-direction:column; overflow:hidden;">
                     <div v-if="loading" class="empty-state">
                         <div class="loading-spinner"></div>
-                        <p>AI 正在阅读教材并生成题目...</p>
+                        <p>{{ streamingText || 'AI 正在阅读教材并生成题目...' }}</p>
                     </div>
                     
-                    <div v-else-if="question" style="display:flex; flex-direction:column; height:100%">
+                    <div v-else-if="question" style="display:flex; flex-direction:column; height:100%; overflow:hidden;">
+                        <!-- 头部只放标签 -->
                         <div class="quiz-header">
                             <div class="tags">
                                 <span class="tag tag-type">{{ {'choice':'单选题','subjective':'简答题','scenario':'场景题'}[config.type] }}</span>
                                 <span class="tag tag-diff">难度: {{ difficulty }}</span>
                             </div>
-                            <div v-html="renderMarkdown(question.question)" class="markdown-body"></div>
                         </div>
 
+                        <!-- 身体放题目和选项，可以滚动 -->
                         <div class="quiz-body">
+                            <!-- 题目内容 -->
+                            <div v-html="renderMarkdown(question.question)" class="question-text markdown-body"></div>
+
                             <!-- 选择题 -->
                             <div v-if="config.type === 'choice'">
                                 <div v-for="(opt, key) in question.options" :key="key" 
@@ -182,30 +115,120 @@
                             </div>
 
                             <!-- 结果 -->
-                            <div v-if="showResult" :class="['result-box', isCorrect ? 'result-success' : 'result-error']" v-if="config.type === 'choice'">
-                                <div style="font-weight:bold; margin-bottom:5px">{{ isCorrect ? '🎉 回答正确' : '❌ 回答错误' }}</div>
-                                <div style="font-size:14px">解析：{{ question.analysis }}</div>
+                            <!-- 选择题结果 -->
+                            <div v-if="showResult && config.type === 'choice'" :class="['result-box', isCorrect ? 'result-success' : 'result-error']">
+                                <div style="font-weight:bold; margin-bottom:5px">{{ isCorrect ? '回答正确' : '回答错误' }}</div>
+                                <div style="font-size:14px; margin-top: 5px;">
+                                    <strong>解析：</strong>
+                                    <div v-html="renderMarkdown(question.analysis)" class="markdown-body" style="display: inline-block; vertical-align: top;"></div>
+                                </div>
                             </div>
                             
+                            <!-- 主观题结果 -->
                             <div v-if="showResult && config.type !== 'choice'" class="result-box" style="background:#f8fafc; border-color:#e2e8f0; color:#334155">
                                 <div v-if="gradeResult">
                                     <div style="font-size:24px; font-weight:bold; color:#2563eb; margin-bottom:10px">{{ gradeResult.score }} 分</div>
-                                    <div style="margin-bottom:10px"><b>评价：</b>{{ gradeResult.reason }}</div>
-                                    <div><b>建议：</b>{{ gradeResult.suggestion }}</div>
+                                    <div style="margin-bottom:10px"><b>AI 评价：</b>{{ gradeResult.reason }}</div>
+                                    <div><b>改进建议：</b>{{ gradeResult.suggestion }}</div>
                                 </div>
-                                <div v-else>评分中...</div>
+                                <div v-else style="text-align:center; padding:20px; color:#64748b">
+                                    <div class="loading-spinner" style="margin:0 auto 10px"></div>
+                                    <div>AI 正在评阅中，请稍候...</div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <div v-else class="empty-state">
-                        <div style="font-size: 40px; opacity: 0.3; margin-bottom: 10px;">👈</div>
                         <p>请在左侧配置并生成题目</p>
                     </div>
                 </div>
 
-                <!-- 视图 B: 历史记录 -->
-                <div v-if="viewMode === 'history'" style="height:100%; overflow-y:auto">
+                <!-- 视图 B: 学习分析 -->
+                <div v-if="viewMode === 'stats'" style="height:100%; overflow-y:auto; padding:20px;">
+                    <div v-if="statsLoading" class="empty-state">
+                        <div class="loading-spinner"></div>
+                        <p>正在加载数据...</p>
+                    </div>
+                    
+                    <div v-else-if="statsData">
+                        <!-- 自适应状态卡片 -->
+                        <div class="stats-card adaptive-card">
+                            <h3 class="stats-title">🎯 自适应状态</h3>
+                            <div class="adaptive-info">
+                                <div class="adaptive-row">
+                                    <span class="adaptive-label">当前难度</span>
+                                    <span class="tag tag-diff-large">{{ statsData.adaptive_state.current_difficulty }}</span>
+                                </div>
+                                <div class="adaptive-row">
+                                    <span class="adaptive-label">最近3题均分</span>
+                                    <span class="adaptive-value" :style="{color: getScoreColor(statsData.adaptive_state.avg_score_last_3)}">
+                                        {{ statsData.adaptive_state.avg_score_last_3 }} 分
+                                    </span>
+                                </div>
+                                <div class="adaptive-row">
+                                    <span class="adaptive-label">稳定性</span>
+                                    <span :class="['adaptive-badge', statsData.adaptive_state.is_stable ? 'badge-success' : 'badge-warning']">
+                                        {{ statsData.adaptive_state.is_stable ? '✓ 稳定' : '⚠ 波动中' }}
+                                    </span>
+                                </div>
+                                <div class="adaptive-row">
+                                    <span class="adaptive-label">下一题难度</span>
+                                    <span class="tag tag-diff-large" :class="getDifficultyClass(statsData.adaptive_state.next_difficulty)">
+                                        {{ statsData.adaptive_state.next_difficulty }}
+                                        <span v-if="statsData.adaptive_state.next_difficulty !== statsData.adaptive_state.current_difficulty" style="margin-left:5px">
+                                            {{ statsData.adaptive_state.next_difficulty > statsData.adaptive_state.current_difficulty ? '↑' : '↓' }}
+                                        </span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="adaptive-reason">
+                                <strong>决策依据：</strong>{{ statsData.adaptive_state.reason }}
+                            </div>
+                        </div>
+
+                        <!-- 分数趋势图 -->
+                        <div class="stats-card">
+                            <h3 class="stats-title">📈 最近答题趋势</h3>
+                            <div class="chart-container">
+                                <div class="chart-wrapper">
+                                    <canvas ref="trendChart" id="trendChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 知识点掌握度 -->
+                        <div class="stats-card" v-if="Object.keys(statsData.keyword_stats).length > 0">
+                            <h3 class="stats-title">📚 知识点掌握度</h3>
+                            <div class="keyword-list">
+                                <div v-for="(stat, keyword) in statsData.keyword_stats" :key="keyword" class="keyword-item">
+                                    <div class="keyword-header">
+                                        <span class="keyword-name">{{ keyword }}</span>
+                                        <span :class="['keyword-level', getLevelClass(stat.level)]">{{ stat.level }}</span>
+                                    </div>
+                                    <div class="keyword-progress">
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" :style="{width: stat.avg_score + '%', background: getProgressColor(stat.avg_score)}"></div>
+                                        </div>
+                                        <span class="keyword-score">{{ stat.avg_score }}</span>
+                                    </div>
+                                    <div class="keyword-meta">已练习 {{ stat.count }} 题</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div v-else class="empty-state" style="margin-top:40px">
+                            <p>暂无知识点数据</p>
+                        </div>
+                    </div>
+                    
+                    <div v-else class="empty-state">
+                        <p>暂无数据</p>
+                    </div>
+                </div>
+
+                <!-- 视图 C: 历史记录 -->
+                <div v-if="viewMode === 'history'" class="history-container">
                     <table class="history-table">
                         <thead>
                             <tr>
@@ -216,7 +239,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="item in historyList" :key="item.id">
+                            <tr v-for="item in historyList" :key="item.id" @click="showDetail(item.id)">
                                 <td style="color:#94a3b8; font-family:monospace; font-size:12px">{{ item.time }}</td>
                                 <td style="font-weight:bold; color:#334155; max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ item.question }}</td>
                                 <td><span class="tag tag-diff">{{ item.difficulty }}</span></td>
@@ -229,115 +252,51 @@
 
             </div>
         </div>
+
+        <!-- 详情弹窗 -->
+        <div v-if="showDetailModal" class="modal-overlay" @click.self="showDetailModal = false">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">答题详情</div>
+                    <button class="modal-close" @click="showDetailModal = false">&times;</button>
+                </div>
+                <div class="modal-body" v-if="detailData">
+                    <div class="detail-item">
+                        <div class="detail-label">答题时间</div>
+                        <div class="detail-value">{{ detailData.time }}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">难度等级</div>
+                        <div class="detail-value">
+                            <span class="tag tag-diff">{{ detailData.difficulty }}</span>
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">题目内容</div>
+                        <div class="detail-value">{{ detailData.question }}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">我的答案</div>
+                        <div class="detail-value">{{ detailData.student_answer }}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">得分</div>
+                        <div class="detail-value">
+                            <span style="font-size: 24px; font-weight: bold;" :style="{color: detailData.score >= 60 ? '#166534' : '#991b1b'}">
+                                {{ detailData.score }} 分
+                            </span>
+                        </div>
+                    </div>
+                    <div class="detail-item" v-if="detailData.comment">
+                        <div class="detail-label">AI 评语</div>
+                        <div class="detail-value">{{ detailData.comment }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <script>
-        const { createApp, ref, reactive, onMounted } = Vue;
-        const API_BASE = 'http://127.0.0.1:8088';
-
-        createApp({
-            setup() {
-                const user = ref({});
-                const viewMode = ref('quiz'); // 'quiz' | 'history'
-                const config = reactive({ keyword: '', type: 'choice', mode: 'adaptive', manualDifficulty: '中等' });
-                const loading = ref(false);
-                const question = ref(null);
-                const difficulty = ref('');
-                const selectedOption = ref(null);
-                const studentAnswer = ref('');
-                const showResult = ref(false);
-                const isCorrect = ref(false);
-                const gradeResult = ref(null);
-                const historyList = ref([]);
-
-                onMounted(() => {
-                    const stored = localStorage.getItem('user_info');
-                    if (!stored) window.location.href = '/static/login.html';
-                    user.value = JSON.parse(stored);
-                });
-
-                const loadHistory = async () => {
-                    viewMode.value = 'history';
-                    try {
-                        const res = await fetch(`${API_BASE}/student/history?student_id=${user.value.id}`);
-                        const data = await res.json();
-                        historyList.value = data.data;
-                    } catch(e) {}
-                };
-
-                const generate = async () => {
-                    if(!config.keyword) return alert('请输入知识点');
-                    loading.value = true;
-                    question.value = null;
-                    showResult.value = false;
-                    selectedOption.value = null;
-                    studentAnswer.value = '';
-                    gradeResult.value = null;
-
-                    try {
-                        const res = await fetch(`${API_BASE}/student/generate_question`, {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({
-                                keyword: config.keyword,
-                                student_id: user.value.id,
-                                mode: config.mode,
-                                manual_difficulty: config.manualDifficulty,
-                                question_type: config.type
-                            })
-                        });
-                        const data = await res.json();
-                        if(data.status === 'success') {
-                            question.value = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
-                            difficulty.value = data.difficulty;
-                        } else { alert(data.detail); }
-                    } catch(e) { alert('生成失败'); } 
-                    finally { loading.value = false; }
-                };
-
-                const submit = async () => {
-                    showResult.value = true;
-                    let payload = {
-                        question: question.value.question,
-                        standard_answer: question.value.answer,
-                        student_id: user.value.id,
-                        difficulty: difficulty.value,
-                        question_type: config.type,
-                        student_answer: '',
-                        direct_score: 0
-                    };
-
-                    if (config.type === 'choice') {
-                        if(!selectedOption.value) return alert('请选择');
-                        isCorrect.value = selectedOption.value === question.value.answer;
-                        payload.student_answer = selectedOption.value;
-                        payload.direct_score = isCorrect.value ? 100 : 0;
-                    } else {
-                        if(!studentAnswer.value) return alert('请输入');
-                        payload.student_answer = studentAnswer.value;
-                    }
-
-                    try {
-                        const res = await fetch(`${API_BASE}/student/grade_answer`, {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify(payload)
-                        });
-                        const data = await res.json();
-                        if (config.type !== 'choice') gradeResult.value = data.data;
-                    } catch(e) { console.error(e); }
-                };
-
-                const logout = () => {
-                    localStorage.removeItem('user_info');
-                    window.location.href = '/static/login.html';
-                };
-
-                const renderMarkdown = (t) => marked.parse(t || '');
-
-                return { user, viewMode, config, loading, question, difficulty, selectedOption, studentAnswer, showResult, isCorrect, gradeResult, historyList, loadHistory, generate, submit, logout, renderMarkdown };
-            }
-        }).mount('#app');
-    </script>
+    <!-- 引入自定义逻辑 -->
+    <script src="/static/student/js/app.js"></script>
 </body>
 </html>

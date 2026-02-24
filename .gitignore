@@ -12,14 +12,12 @@ vh-env/
 pip-log.txt
 pip-delete-this-directory.txt
 
-
 # 必须忽略你的虚拟环境文件夹名字
 FastAPI_env/
 env/
 vh-env/
 venv/
 .venv/
-
 
 # --- 数据库与大型文件 ---
 # 向量数据库（这个很大且包含私有数据，不建议传）
@@ -36,3 +34,20 @@ Thumbs.db
 
 # --- 临时测试文件 ---
 tempCodeRunnerFile.py
+
+# --- 新增：临时文件和日志 ---
+*.log
+*.tmp
+project_context.txt
+pack_code.py
+update_db.py
+
+# --- 新增：生成的文档 ---
+README.pdf
+
+# --- 新增：个人笔记（建议移到 notes/） ---
+My_note.md
+
+# --- 新增：迁移脚本（已执行后可忽略） ---
+# migrate_simple.py
+# run_migrate.bat

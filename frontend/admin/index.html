@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <title>研发管理控制台</title>
@@ -8,18 +9,34 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* 极客风滚动条 */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #0f172a; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #475569; }
-        
-        .code-font { font-family: 'Consolas', 'Monaco', monospace; }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        .code-font {
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
     </style>
 </head>
+
 <body class="bg-slate-950 text-slate-300 h-screen flex overflow-hidden font-sans">
-    
+
     <div id="app" class="flex w-full h-full">
-        
+
         <!-- 侧边栏 -->
         <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col flex-shrink-0">
             <div class="p-6 border-b border-slate-800">
@@ -29,18 +46,19 @@
 
             <nav class="flex-1 p-4 space-y-2">
                 <button @click="currentView = 'debug'" :class="navClass('debug')">
-                    <span class="mr-3">🔍</span> 检索调试实验室
+                    检索调试实验室
                 </button>
                 <button @click="currentView = 'ragas'" :class="navClass('ragas')">
-                    <span class="mr-3">⚖️</span> RAGAS 效果评测
+                    RAGAS 效果评测
                 </button>
                 <button @click="currentView = 'stress'" :class="navClass('stress')">
-                    <span class="mr-3">🔥</span> 系统压力测试
+                    系统压力测试
                 </button>
             </nav>
 
             <div class="p-4 border-t border-slate-800">
-                <button @click="logout" class="w-full border border-red-900/50 text-red-500 hover:bg-red-900/20 py-2 rounded text-xs transition-colors">
+                <button @click="logout"
+                    class="w-full border border-red-900/50 text-red-500 hover:bg-red-900/20 py-2 rounded text-xs transition-colors">
                     退出登录
                 </button>
             </div>
@@ -49,7 +67,9 @@
         <!-- 主内容 -->
         <main class="flex-1 flex flex-col h-full overflow-hidden relative">
             <!-- 背景网格 -->
-            <div class="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:40px_40px] opacity-10 pointer-events-none"></div>
+            <div
+                class="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:40px_40px] opacity-10 pointer-events-none">
+            </div>
 
             <!-- 视图 1: 调试实验室 -->
             <div v-if="currentView === 'debug'" class="flex-1 flex flex-col p-6 overflow-hidden z-10">
@@ -59,15 +79,19 @@
                         <p class="text-xs text-slate-500">实时监控 RAG 检索与 LLM 生成过程</p>
                     </div>
                     <div class="flex gap-0">
-                        <input v-model="keyword" @keydown.enter.prevent="runDebug" type="text" class="bg-slate-900 border border-slate-700 border-r-0 rounded-l px-4 py-2 text-sm w-80 focus:ring-0 focus:border-blue-500 outline-none text-white" placeholder="输入测试关键词 (如: 装饰器)">
-                        <button @click="runDebug" :disabled="loading" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-r text-sm font-bold transition-all disabled:opacity-50">
+                        <input v-model="keyword" @keydown.enter.prevent="runDebug" type="text"
+                            class="bg-slate-900 border border-slate-700 border-r-0 rounded-l px-4 py-2 text-sm w-80 focus:ring-0 focus:border-blue-500 outline-none text-white"
+                            placeholder="输入测试关键词 (如: 装饰器)">
+                        <button @click="runDebug" :disabled="loading"
+                            class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-r text-sm font-bold transition-all disabled:opacity-50">
                             {{ loading ? '执行中...' : '开始调试' }}
                         </button>
                     </div>
                 </div>
 
                 <!-- 性能日志 -->
-                <div v-if="debugInfo.timing_log" class="mb-6 p-3 bg-black border-l-4 border-green-500 rounded-r shadow-lg code-font text-xs flex items-center">
+                <div v-if="debugInfo.timing_log"
+                    class="mb-6 p-3 bg-black border-l-4 border-green-500 rounded-r shadow-lg code-font text-xs flex items-center">
                     <span class="text-green-500 mr-2">➜</span>
                     <span class="text-green-400">{{ debugInfo.timing_log }}</span>
                 </div>
@@ -80,38 +104,48 @@
                             <span class="text-[10px] bg-red-900/30 text-red-300 px-2 py-0.5 rounded">Top 10</span>
                         </div>
                         <div class="p-4 overflow-y-auto space-y-3 flex-1">
-                            <div v-for="(doc, i) in debugInfo.raw_docs" :key="i" class="p-3 bg-slate-950 border border-slate-800 rounded text-[10px] text-slate-400 leading-relaxed">
+                            <div v-for="(doc, i) in debugInfo.raw_docs" :key="i"
+                                class="p-3 bg-slate-950 border border-slate-800 rounded text-[10px] text-slate-400 leading-relaxed">
                                 <div class="font-bold text-slate-600 mb-1">文档 #{{ i+1 }}</div>
                                 {{ doc.slice(0, 150) }}...
                             </div>
-                            <div v-if="!debugInfo.raw_docs.length" class="h-full flex items-center justify-center text-slate-700 text-xs">暂无数据</div>
+                            <div v-if="!debugInfo.raw_docs.length"
+                                class="h-full flex items-center justify-center text-slate-700 text-xs">暂无数据</div>
                         </div>
                     </div>
 
                     <!-- Rerank 结果 -->
                     <div class="flex flex-col bg-slate-900/50 border border-blue-900/30 rounded-lg overflow-hidden">
-                        <div class="bg-blue-900/10 px-4 py-2 border-b border-blue-900/30 flex justify-between items-center">
+                        <div
+                            class="bg-blue-900/10 px-4 py-2 border-b border-blue-900/30 flex justify-between items-center">
                             <span class="text-xs font-bold text-blue-400">重排序精选 (Rerank)</span>
                             <span class="text-[10px] bg-blue-900/30 text-blue-300 px-2 py-0.5 rounded">Top 3</span>
                         </div>
                         <div class="p-4 overflow-y-auto space-y-3 flex-1">
-                            <div v-for="(doc, i) in debugInfo.rerank_docs" :key="i" class="p-3 bg-slate-950 border border-blue-900/30 rounded text-[10px] text-slate-300 leading-relaxed relative">
-                                <div class="absolute top-0 right-0 bg-blue-600 text-white text-[9px] px-1.5 py-0.5 rounded-bl">#{{ i+1 }}</div>
+                            <div v-for="(doc, i) in debugInfo.rerank_docs" :key="i"
+                                class="p-3 bg-slate-950 border border-blue-900/30 rounded text-[10px] text-slate-300 leading-relaxed relative">
+                                <div
+                                    class="absolute top-0 right-0 bg-blue-600 text-white text-[9px] px-1.5 py-0.5 rounded-bl">
+                                    #{{ i+1 }}</div>
                                 {{ doc.slice(0, 200) }}...
                             </div>
-                            <div v-if="!debugInfo.rerank_docs.length" class="h-full flex items-center justify-center text-slate-700 text-xs">暂无数据</div>
+                            <div v-if="!debugInfo.rerank_docs.length"
+                                class="h-full flex items-center justify-center text-slate-700 text-xs">暂无数据</div>
                         </div>
                     </div>
 
                     <!-- LLM 输出 -->
                     <div class="flex flex-col bg-slate-900/50 border border-purple-900/30 rounded-lg overflow-hidden">
-                        <div class="bg-purple-900/10 px-4 py-2 border-b border-purple-900/30 flex justify-between items-center">
+                        <div
+                            class="bg-purple-900/10 px-4 py-2 border-b border-purple-900/30 flex justify-between items-center">
                             <span class="text-xs font-bold text-purple-400">模型生成结果</span>
                             <span class="text-[10px] bg-purple-900/30 text-purple-300 px-2 py-0.5 rounded">JSON</span>
                         </div>
                         <div class="p-4 overflow-y-auto flex-1 bg-slate-950">
-                            <pre v-if="generatedContent" class="text-[10px] text-purple-200 whitespace-pre-wrap code-font">{{ generatedContent }}</pre>
-                            <div v-else class="h-full flex items-center justify-center text-slate-700 text-xs">等待生成...</div>
+                            <pre v-if="generatedContent"
+                                class="text-[10px] text-purple-200 whitespace-pre-wrap code-font">{{ generatedContent }}</pre>
+                            <div v-else class="h-full flex items-center justify-center text-slate-700 text-xs">等待生成...
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -124,7 +158,9 @@
                         <h2 class="text-2xl font-bold text-white">RAGAS 自动化评测</h2>
                         <p class="text-xs text-slate-500 mt-1">对比 [无 Rerank] 与 [有 Rerank] 的检索质量</p>
                     </div>
-                    <button class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded text-sm font-bold transition-all disabled:opacity-50" @click="runRagas" :disabled="evaluating">
+                    <button
+                        class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded text-sm font-bold transition-all disabled:opacity-50"
+                        @click="runRagas" :disabled="evaluating">
                         {{ evaluating ? '评测运行中 (约20分钟)...' : '🚀 开始对比评测' }}
                     </button>
                 </div>
@@ -136,11 +172,13 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div class="bg-slate-950 p-3 rounded border border-slate-800 text-center">
                                 <div class="text-xs text-slate-500">忠实度 (Faithfulness)</div>
-                                <div class="text-xl font-bold text-slate-200">{{ ragasScores.no_rerank.faithfulness }}</div>
+                                <div class="text-xl font-bold text-slate-200">{{ ragasScores.no_rerank.faithfulness }}
+                                </div>
                             </div>
                             <div class="bg-slate-950 p-3 rounded border border-slate-800 text-center">
                                 <div class="text-xs text-slate-500">上下文精度 (Precision)</div>
-                                <div class="text-xl font-bold text-slate-200">{{ ragasScores.no_rerank.context_precision }}</div>
+                                <div class="text-xl font-bold text-slate-200">{{ ragasScores.no_rerank.context_precision
+                                    }}</div>
                             </div>
                         </div>
                     </div>
@@ -149,11 +187,13 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div class="bg-slate-950 p-3 rounded border border-blue-900/30 text-center">
                                 <div class="text-xs text-slate-500">忠实度 (Faithfulness)</div>
-                                <div class="text-xl font-bold text-blue-400">{{ ragasScores.with_rerank.faithfulness }}</div>
+                                <div class="text-xl font-bold text-blue-400">{{ ragasScores.with_rerank.faithfulness }}
+                                </div>
                             </div>
                             <div class="bg-slate-950 p-3 rounded border border-blue-900/30 text-center">
                                 <div class="text-xs text-slate-500">上下文精度 (Precision)</div>
-                                <div class="text-xl font-bold text-blue-400">{{ ragasScores.with_rerank.context_precision }}</div>
+                                <div class="text-xl font-bold text-blue-400">{{
+                                    ragasScores.with_rerank.context_precision }}</div>
                             </div>
                         </div>
                     </div>
@@ -161,24 +201,97 @@
 
                 <!-- 雷达图容器 -->
                 <div id="ragasChart" class="w-full h-96 bg-slate-900 rounded-xl border border-slate-800 p-4"></div>
-                
+
                 <div v-if="!ragasScores && !evaluating" class="text-center text-slate-600 text-sm mt-20">
                     请点击右上角按钮开始评测，系统将自动运行 Golden Dataset 并生成对比报告。
                 </div>
             </div>
 
-            <!-- 视图 3: 压测 (占位) -->
-            <div v-if="currentView === 'stress'" class="flex-1 flex flex-col items-center justify-center z-10">
-                <div class="text-6xl mb-4 opacity-20">🔥</div>
-                <h2 class="text-2xl font-bold text-slate-600">系统压力测试模块</h2>
-                <p class="text-xs text-slate-700 mt-2">Locust 集成开发中...</p>
+            <!-- 视图 3: 压测 -->
+            <div v-if="currentView === 'stress'" class="flex-1 flex flex-col p-8 z-10 overflow-y-auto">
+                <div class="flex justify-between items-center mb-8">
+                    <div>
+                        <h2 class="text-2xl font-bold text-white">系统压力测试 (Locust)</h2>
+                        <p class="text-xs text-slate-500 mt-1">模拟多用户并发访问，评估系统稳定性</p>
+                    </div>
+                    <div class="flex gap-4">
+                        <div v-if="stressStatus === 'running'"
+                            class="flex items-center gap-2 text-green-400 text-sm font-bold animate-pulse">
+                            <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                            压测运行中
+                        </div>
+                        <div v-else class="flex items-center gap-2 text-slate-500 text-sm">
+                            <span class="w-2 h-2 rounded-full bg-slate-600"></span>
+                            未运行
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 配置区域 -->
+                <div class="grid grid-cols-2 gap-8 mb-8">
+                    <div class="bg-slate-900 p-6 rounded-xl border border-slate-800">
+                        <h3 class="text-slate-400 font-bold mb-6 text-sm">配置参数</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs text-slate-500 mb-1">并发用户数 (Users)</label>
+                                <input v-model.number="stressConfig.user_count" type="number"
+                                    class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-white focus:border-blue-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-500 mb-1">每秒启动数 (Spawn Rate)</label>
+                                <input v-model.number="stressConfig.spawn_rate" type="number"
+                                    class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-white focus:border-blue-500 outline-none">
+                            </div>
+                            <div class="pt-4 flex gap-4">
+                                <button @click="startStress" :disabled="stressStatus === 'running'"
+                                    class="flex-1 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-600 text-white py-2 rounded text-sm font-bold transition-all">
+                                    开始压测
+                                </button>
+                                <button @click="stopStress" :disabled="stressStatus !== 'running'"
+                                    class="flex-1 bg-red-900/50 hover:bg-red-900/80 disabled:bg-slate-800 disabled:text-slate-600 text-red-400 py-2 rounded text-sm font-bold transition-all border border-red-900">
+                                    停止
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 实时数据看板 -->
+                    <div class="bg-slate-900 p-6 rounded-xl border border-slate-800 flex flex-col justify-center">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="text-center p-4 bg-slate-950 rounded border border-slate-800">
+                                <div class="text-xs text-slate-500 mb-1">RPS (每秒请求)</div>
+                                <div class="text-3xl font-bold text-blue-400">{{ stressStats.total_rps?.toFixed(1) || 0
+                                    }}</div>
+                            </div>
+                            <div class="text-center p-4 bg-slate-950 rounded border border-slate-800">
+                                <div class="text-xs text-slate-500 mb-1">失败率</div>
+                                <div class="text-3xl font-bold"
+                                    :class="stressStats.fail_ratio > 0.01 ? 'text-red-500' : 'text-green-500'">
+                                    {{ (stressStats.fail_ratio * 100)?.toFixed(2) || 0 }}%
+                                </div>
+                            </div>
+                            <div class="text-center p-4 bg-slate-950 rounded border border-slate-800">
+                                <div class="text-xs text-slate-500 mb-1">P95 响应时间</div>
+                                <div class="text-3xl font-bold text-purple-400">{{
+                                    stressStats.current_response_time_percentile_95 || 0 }} s</div>
+                            </div>
+                            <div class="text-center p-4 bg-slate-950 rounded border border-slate-800">
+                                <div class="text-xs text-slate-500 mb-1">当前并发用户</div>
+                                <div class="text-3xl font-bold text-slate-200">{{ stressStats.user_count || 0 }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 趋势图表 -->
+                <div id="stressChart" class="w-full h-80 bg-slate-900 rounded-xl border border-slate-800 p-4"></div>
             </div>
 
         </main>
     </div>
 
     <script>
-        const { createApp, ref, onMounted, nextTick } = Vue;
+        const { createApp, ref, reactive, onMounted, nextTick } = Vue;
         const API_BASE = 'http://127.0.0.1:8088';
 
         createApp({
@@ -190,6 +303,14 @@
                 const debugInfo = ref({ raw_docs: [], rerank_docs: [], timing_log: '' });
                 const generatedContent = ref('');
                 const ragasScores = ref(null);
+
+                // 压测状态
+                const stressStatus = ref('stopped');
+                const stressConfig = reactive({ user_count: 10, spawn_rate: 1 });
+                const stressStats = ref({});
+                let stressTimer = null;
+                let stressChartInstance = null;
+                const stressChartData = { rps: [], users: [], time: [] };
 
                 onMounted(() => {
                     const stored = localStorage.getItem('user_info');
@@ -206,20 +327,113 @@
                     loading.value = true;
                     debugInfo.value = { raw_docs: [], rerank_docs: [], timing_log: '' };
                     generatedContent.value = '';
-                    
+
                     try {
-                        const res = await fetch(`${API_BASE}/admin/debug_generation`, {
+                        const response = await fetch(`${API_BASE}/admin/debug_generation_stream`, {
                             method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
+                            headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ keyword: keyword.value })
                         });
-                        const data = await res.json();
-                        if (data.status === 'success') {
-                            debugInfo.value = data.data.debug_info;
-                            generatedContent.value = JSON.stringify(data.data.generated_content, null, 2);
-                        } else { alert('错误: ' + data.detail); }
-                    } catch (e) { alert('连接失败'); } 
-                    finally { loading.value = false; }
+
+                        const reader = response.body.getReader();
+                        const decoder = new TextDecoder();
+                        let fullText = '';
+
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
+
+                            const chunk = decoder.decode(value, { stream: true });
+                            const lines = chunk.split('\n');
+
+                            for (const line of lines) {
+                                if (line.startsWith('data: ')) {
+                                    try {
+                                        const jsonData = JSON.parse(line.substring(6));
+
+                                        if (jsonData.type === 'metadata') {
+                                            // 接收调试信息
+                                            debugInfo.value = {
+                                                raw_docs: jsonData.raw_docs || [],
+                                                rerank_docs: jsonData.rerank_docs || [],
+                                                timing_log: `RAG 检索完成 (${jsonData.rag_time})，LLM 生成中...`
+                                            };
+                                        } else if (jsonData.type === 'content') {
+                                            // 逐字显示生成内容
+                                            fullText += jsonData.content;
+                                            // 实时解析并格式化显示
+                                            try {
+                                                // 尝试解析为JSON（如果已经是完整的JSON）
+                                                const parsed = JSON.parse(fullText);
+                                                generatedContent.value = JSON.stringify(parsed, null, 2);
+                                            } catch {
+                                                // 如果还不是完整JSON，显示原始文本
+                                                generatedContent.value = fullText;
+                                            }
+                                        } else if (jsonData.type === 'done') {
+                                            // 生成完成
+                                            fullText = jsonData.full_content;
+                                            debugInfo.value.timing_log = jsonData.timing_log;
+
+                                            // 解析最终题目
+                                            const parsed = parseStreamedQuestion(fullText);
+                                            generatedContent.value = JSON.stringify(parsed, null, 2);
+
+                                            loading.value = false;
+                                        }
+                                    } catch (e) {
+                                        console.error('解析 SSE 数据失败:', e);
+                                    }
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        alert('连接失败: ' + e.message);
+                        loading.value = false;
+                    }
+                };
+
+                // 解析流式生成的题目文本
+                const parseStreamedQuestion = (text) => {
+                    try {
+                        const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+                        const result = { question: '', options: null, answer: '', analysis: '' };
+
+                        let currentSection = '';
+                        let optionsObj = {};
+
+                        for (const line of lines) {
+                            if (line.startsWith('题目：')) {
+                                currentSection = 'question';
+                                result.question = line.substring(3);
+                            } else if (line.match(/^[A-D]\./)) {
+                                const key = line[0];
+                                const value = line.substring(2).trim();
+                                optionsObj[key] = value;
+                            } else if (line.startsWith('答案：')) {
+                                currentSection = 'answer';
+                                result.answer = line.substring(3).trim();
+                            } else if (line.startsWith('解析：')) {
+                                currentSection = 'analysis';
+                                result.analysis = line.substring(3);
+                            } else {
+                                if (currentSection === 'question') {
+                                    result.question += '\n' + line;
+                                } else if (currentSection === 'analysis') {
+                                    result.analysis += '\n' + line;
+                                }
+                            }
+                        }
+
+                        if (Object.keys(optionsObj).length > 0) {
+                            result.options = optionsObj;
+                        }
+
+                        return result;
+                    } catch (e) {
+                        console.error('解析题目失败:', e);
+                        return { question: text, options: null, answer: '', analysis: '' };
+                    }
                 };
 
                 const runRagas = async () => {
@@ -296,9 +510,129 @@
                     return base + "text-slate-500 hover:bg-slate-800 hover:text-slate-300";
                 };
 
-                return { currentView, keyword, loading, evaluating, debugInfo, generatedContent, ragasScores, runDebug, runRagas, logout, navClass };
+                const startStress = async () => {
+                    if (stressConfig.user_count <= 0) return alert('用户数必须大于0');
+                    try {
+                        const res = await fetch(`${API_BASE}/admin/stress/start`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(stressConfig)
+                        });
+                        const data = await res.json();
+                        if (data.success !== false) {
+                            stressStatus.value = 'running';
+                            startPolling();
+                        } else {
+                            alert('启动失败: ' + data.message);
+                        }
+                    } catch (e) { alert('无法连接服务器'); }
+                };
+
+                const stopStress = async () => {
+                    try {
+                        await fetch(`${API_BASE}/admin/stress/stop`, { method: 'POST' });
+                        stressStatus.value = 'stopped';
+                        stopPolling();
+                    } catch (e) { console.error(e); }
+                };
+
+                const startPolling = () => {
+                    if (stressTimer) clearInterval(stressTimer);
+                    // 初始化图表
+                    if (!stressChartInstance) {
+                        nextTick(() => initStressChart());
+                    }
+
+                    // 直接轮询 Locust 的原生 API，绕过后端代理
+                    const LOCUST_URL = 'http://127.0.0.1:8089';
+
+                    stressTimer = setInterval(async () => {
+                        try {
+                            const res = await fetch(`${LOCUST_URL}/stats/requests`);
+                            const data = await res.json();
+
+                            // 从 stats 数组中找到 "Aggregated" 条目（包含累计统计）
+                            const aggregated = data.stats?.find(s => s.name === 'Aggregated') || {};
+
+                            // 正确提取数据：
+                            // - total_rps: 用 Aggregated 的累计 RPS（而非顶层的瞬时值）
+                            // - P95: 字段名包含小数点，需用方括号访问
+                            stressStats.value = {
+                                state: data.state,
+                                total_rps: aggregated.total_rps || 0,
+                                fail_ratio: data.fail_ratio,
+                                current_response_time_percentile_95: Math.round((aggregated['response_time_percentile_0.95'] || 0) / 1000), // 转为秒
+                                user_count: data.user_count,
+                                // 额外添加更多有用指标
+                                num_requests: aggregated.num_requests || 0,
+                                avg_response_time: Math.round(aggregated.avg_response_time || 0)
+                            };
+                            stressStatus.value = data.state;
+                            updateStressChart(stressStats.value);
+                        } catch (e) { console.error('Polling error', e); }
+                    }, 2000);
+                };
+
+                const stopPolling = () => {
+                    if (stressTimer) clearInterval(stressTimer);
+                };
+
+                const initStressChart = () => {
+                    const dom = document.getElementById('stressChart');
+                    if (!dom) return;
+                    stressChartInstance = echarts.init(dom, 'dark');
+                    const option = {
+                        backgroundColor: 'transparent',
+                        title: { text: '实时压力趋势', left: 'center', textStyle: { color: '#94a3b8', fontSize: 14 } },
+                        tooltip: { trigger: 'axis' },
+                        legend: { bottom: 0, data: ['RPS', '并发用户数'] },
+                        xAxis: { type: 'category', data: stressChartData.time },
+                        yAxis: [
+                            { type: 'value', name: 'RPS', position: 'left' },
+                            { type: 'value', name: 'Users', position: 'right' }
+                        ],
+                        series: [
+                            { name: 'RPS', type: 'line', smooth: true, data: stressChartData.rps, itemStyle: { color: '#3b82f6' } },
+                            { name: '并发用户数', type: 'line', smooth: true, yAxisIndex: 1, data: stressChartData.users, itemStyle: { color: '#10b981' }, areaStyle: { opacity: 0.1 } }
+                        ]
+                    };
+                    stressChartInstance.setOption(option);
+                };
+
+                const updateStressChart = (stats) => {
+                    if (!stressChartInstance) return;
+                    const now = new Date().toLocaleTimeString();
+
+                    if (stressChartData.time.length > 20) {
+                        stressChartData.time.shift();
+                        stressChartData.rps.shift();
+                        stressChartData.users.shift();
+                    }
+
+                    stressChartData.time.push(now);
+                    stressChartData.rps.push(stats.total_rps);
+                    stressChartData.users.push(stats.user_count);
+
+                    stressChartInstance.setOption({
+                        xAxis: { data: stressChartData.time },
+                        series: [
+                            { data: stressChartData.rps },
+                            { data: stressChartData.users }
+                        ]
+                    });
+                };
+
+                // 离开页面时停止轮询
+                window.addEventListener('beforeunload', stopPolling);
+
+                return {
+                    currentView, keyword, loading, evaluating, debugInfo, generatedContent, ragasScores,
+                    stressStatus, stressConfig, stressStats, startStress, stopStress,
+                    runDebug, runRagas, logout, navClass
+                };
             }
         }).mount('#app');
     </script>
 </body>
+
 </html>
