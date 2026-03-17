@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+
+# 文档和笔记
+notes/
+docs/
+*.md
+!README.md
+
+# 测试
+tests/
+*.log
+
+# 临时文件
+*.tmp
+*.bak
+.DS_Store
+
+# 数据库文件（如果有本地 SQLite）
+*.db
+*.sqlite
+
+# 环境变量（会通过 docker-compose 传入）
+.env
+
+# 打包脚本
+pack_code.py
+clean_project.py
+

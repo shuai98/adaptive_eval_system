@@ -57,9 +57,9 @@ class RAGService:
                 embeddings=self.embeddings,
                 allow_dangerous_deserialization=True
             )
-            print("✅ FAISS 索引加载成功！")
+            print(" FAISS 索引加载成功！")
         except Exception as e:
-            print(f"❌ [Warning] FAISS load failed: {e}")
+            print(f" [Warning] FAISS load failed: {e}")
             self.vector_db = None
 
         print("[System] Loading Rerank Model...")
@@ -105,7 +105,7 @@ class RAGService:
                     # 把 Redis 读取时间算作 "recall" 时间，因为它们都是“取回数据”的过程
                     data["timings"]["recall"] = f"{redis_cost_ms:.2f}ms (Redis)"
                     
-                    # Rerank 确实没做，所以是真正的 0，但我们可以标记为 Skipped
+                    # Rerank 确实没做，所以是真正的 0，可以标记为 Skipped
                     data["timings"]["rerank"] = "0ms (Skipped)"
                     
                     return data

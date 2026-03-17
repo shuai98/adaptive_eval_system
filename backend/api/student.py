@@ -46,12 +46,12 @@ class AdaptiveEngine:
         1. 滑动窗口：看最近3题的平均分，而不是单题
         2. 稳定性检查：需要连续3题表现好才升级，避免频繁跳级
         3. 知识点维度：同一知识点的历史表现会影响难度判断
-        4. 冷启动优化：新学生根据整体水平决定起始难度
+        4. 冷启动优化：新学生从中等难度开始
         """
-        # 1. 获取最近5题记录（用于滑动窗口分析）
+        # 1. 获取最近3题记录（用于滑动窗口分析）
         recent_records = db.query(ExamRecord).filter(
             ExamRecord.student_id == student_id
-        ).order_by(ExamRecord.created_at.desc()).limit(5).all()
+        ).order_by(ExamRecord.created_at.desc()).limit(3).all()
 
         if len(recent_records) < 3:
             return "中等"  # 冷启动：新学生从中等难度开始

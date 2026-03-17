@@ -154,7 +154,7 @@
                     <div v-else-if="statsData">
                         <!-- 自适应状态卡片 -->
                         <div class="stats-card adaptive-card">
-                            <h3 class="stats-title">🎯 自适应状态</h3>
+                            <h3 class="stats-title"> 自适应状态</h3>
                             <div class="adaptive-info">
                                 <div class="adaptive-row">
                                     <span class="adaptive-label">当前难度</span>
@@ -189,7 +189,7 @@
 
                         <!-- 分数趋势图 -->
                         <div class="stats-card">
-                            <h3 class="stats-title">📈 最近答题趋势</h3>
+                            <h3 class="stats-title"> 最近答题趋势</h3>
                             <div class="chart-container">
                                 <div class="chart-wrapper">
                                     <canvas ref="trendChart" id="trendChart"></canvas>
@@ -199,7 +199,7 @@
 
                         <!-- 知识点掌握度 -->
                         <div class="stats-card" v-if="Object.keys(statsData.keyword_stats).length > 0">
-                            <h3 class="stats-title">📚 知识点掌握度</h3>
+                            <h3 class="stats-title"> 知识点掌握度</h3>
                             <div class="keyword-list">
                                 <div v-for="(stat, keyword) in statsData.keyword_stats" :key="keyword" class="keyword-item">
                                     <div class="keyword-header">

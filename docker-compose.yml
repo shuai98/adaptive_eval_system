@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # MySQL 数据库
+  mysql:
+    image: mysql:8.0
+    container_name: adaptive_eval_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: adaptive_eval
+      MYSQL_USER: adaptive_user
+      MYSQL_PASSWORD: adaptive_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 5s
+      retries: 10
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: adaptive_eval_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      timeout: 3s
+      retries: 5
+
+  # 后端应用
+  backend:
+    build: .
+    container_name: adaptive_eval_backend
+    restart: always
+    ports:
+      - "8088:8088"
+    environment:
+      # 数据库配置
+      MYSQL_USER: root
+      MYSQL_PASSWORD: 123456
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DB: adaptive_eval
+      
+      # Redis 配置
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      
+      # API 配置（需要替换为你的实际 API Key）
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+      HF_ENDPOINT: https://hf-mirror.com
+      
+      # 其他配置
+      NO_PROXY: localhost,127.0.0.1,0.0.0.0
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  mysql_data:
+  redis_data:
+

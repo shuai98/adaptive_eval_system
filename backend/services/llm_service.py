@@ -70,7 +70,8 @@ class LLMService:
         chain = prompt | self.quiz_llm
         
         try:
-            result = chain.invoke({
+            # 修复：使用 ainvoke 实现真正的异步调用，避免阻塞事件循环
+            result = await chain.ainvoke({
                 "context": context, 
                 "keyword": keyword,
                 "difficulty": difficulty,
@@ -171,7 +172,8 @@ D. [选项D内容]
         chain = prompt | self.grade_llm
         
         try:
-            result = chain.invoke({
+            # 修复：使用 ainvoke 实现真正的异步调用，避免阻塞事件循环
+            result = await chain.ainvoke({
                 "question": question, 
                 "standard_answer": standard_answer, 
                 "student_answer": student_answer

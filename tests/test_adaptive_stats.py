@@ -18,24 +18,24 @@ def test_adaptive_stats():
         student = db.query(User).filter(User.role == 'student').first()
         
         if not student:
-            print("❌ 没有找到学生用户")
+            print(" 没有找到学生用户")
             return
         
-        print(f"✅ 找到学生: {student.username} (ID: {student.id})")
+        print(f" 找到学生: {student.username} (ID: {student.id})")
         
         # 2. 查看该学生的答题记录
         records = db.query(ExamRecord).filter(
             ExamRecord.student_id == student.id
         ).order_by(ExamRecord.created_at.desc()).limit(10).all()
         
-        print(f"\n📊 最近 {len(records)} 条答题记录:")
+        print(f"\n 最近 {len(records)} 条答题记录:")
         for i, r in enumerate(records, 1):
             print(f"  {i}. 分数: {r.ai_score}, 难度: {r.difficulty}, 时间: {r.created_at}")
         
         # 3. 测试自适应算法
         if len(records) >= 3:
             next_diff = AdaptiveEngine.calculate_next_difficulty(db, student.id)
-            print(f"\n🎯 自适应算法建议下一题难度: {next_diff}")
+            print(f"\n 自适应算法建议下一题难度: {next_diff}")
             
             # 计算最近3题平均分
             last_3_scores = [r.ai_score for r in records[:3]]
@@ -48,7 +48,7 @@ def test_adaptive_stats():
             print(f"   难度稳定性: {'稳定' if is_stable else '不稳定'}")
         
         # 4. 查看知识点统计
-        print("\n📚 知识点统计:")
+        print("\n 知识点统计:")
         keyword_stats = {}
         
         all_records = db.query(ExamRecord, QuestionHistory).join(
@@ -69,10 +69,10 @@ def test_adaptive_stats():
             level = "熟练掌握" if avg >= 85 else "基本掌握" if avg >= 70 else "需要练习" if avg >= 60 else "未掌握"
             print(f"   {kw}: 平均分 {avg:.1f} ({stat['count']}题) - {level}")
         
-        print("\n✅ 测试完成！")
+        print("\n 测试完成！")
         
     except Exception as e:
-        print(f"❌ 测试失败: {e}")
+        print(f" 测试失败: {e}")
         import traceback
         traceback.print_exc()
     finally:

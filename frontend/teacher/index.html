@@ -82,7 +82,7 @@
 <body>
     <div id="app">
         <div class="header">
-            <h1>👨‍🏫 教师管理控制台</h1>
+            <h1> 教师管理控制台</h1>
             <div style="display: flex; align-items: center; gap: 15px;">
                 <span style="font-size: 12px; color: #64748b;">用户: {{ user.username }}</span>
                 <button class="btn-logout" @click="logout">退出</button>
@@ -92,7 +92,7 @@
         <div class="main-grid">
             <!-- 左侧：维护 -->
             <div class="card">
-                <div class="card-header">📚 资料管理</div>
+                <div class="card-header"> 资料管理</div>
                 <div class="card-body upload-section">
                     
                     <!-- 上传按钮 -->
@@ -104,7 +104,7 @@
 
                     <!-- 重建按钮 -->
                     <button class="btn-primary" @click="reindex" :disabled="reindexing">
-                        {{ reindexing ? '正在重建索引...' : '🔄 重建向量索引' }}
+                        {{ reindexing ? '正在重建索引...' : ' 重建向量索引' }}
                     </button>
 
                     <div v-if="msg" :class="['msg', msgType === 'success' ? 'msg-success' : 'msg-error']">
@@ -113,7 +113,7 @@
 
                     <!-- 我的文档列表 (找回的功能) -->
                     <div class="doc-list">
-                        <div class="doc-title">📂 我上传的文档</div>
+                        <div class="doc-title"> 我上传的文档</div>
                         <div v-if="myDocs.length === 0" style="text-align: center; color: #cbd5e1; font-size: 12px; padding: 10px;">暂无上传记录</div>
                         <div v-for="doc in myDocs" :key="doc.id" class="doc-item">
                             <span class="doc-name">📄 {{ doc.name }}</span>
@@ -126,7 +126,7 @@
             <!-- 右侧：数据 -->
             <div class="card">
                 <div class="card-header">
-                    <span>📊 全班学情监控</span>
+                    <span> 全班学情监控</span>
                     <button class="refresh-btn" @click="loadData">刷新 ↻</button>
                 </div>
                 
