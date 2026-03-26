@@ -101,13 +101,13 @@
                     <div class="flex flex-col bg-slate-900/50 border border-slate-800 rounded-lg overflow-hidden">
                         <div class="bg-slate-900 px-4 py-2 border-b border-slate-800 flex justify-between items-center">
                             <span class="text-xs font-bold text-red-400">原始检索 (FAISS)</span>
-                            <span class="text-[10px] bg-red-900/30 text-red-300 px-2 py-0.5 rounded">Top 10</span>
+                            <span class="text-[10px] bg-red-900/30 text-red-300 px-2 py-0.5 rounded">Top {{ debugInfo.raw_docs.length }}</span>
                         </div>
                         <div class="p-4 overflow-y-auto space-y-3 flex-1">
                             <div v-for="(doc, i) in debugInfo.raw_docs" :key="i"
-                                class="p-3 bg-slate-950 border border-slate-800 rounded text-[10px] text-slate-400 leading-relaxed">
+                                class="p-3 bg-slate-950 border border-slate-800 rounded text-[10px] text-slate-400 leading-relaxed break-words">
                                 <div class="font-bold text-slate-600 mb-1">文档 #{{ i+1 }}</div>
-                                {{ doc.slice(0, 150) }}...
+                                {{ doc }}
                             </div>
                             <div v-if="!debugInfo.raw_docs.length"
                                 class="h-full flex items-center justify-center text-slate-700 text-xs">暂无数据</div>
@@ -119,15 +119,15 @@
                         <div
                             class="bg-blue-900/10 px-4 py-2 border-b border-blue-900/30 flex justify-between items-center">
                             <span class="text-xs font-bold text-blue-400">重排序精选 (Rerank)</span>
-                            <span class="text-[10px] bg-blue-900/30 text-blue-300 px-2 py-0.5 rounded">Top 3</span>
+                            <span class="text-[10px] bg-blue-900/30 text-blue-300 px-2 py-0.5 rounded">Top {{ debugInfo.rerank_docs.length }}</span>
                         </div>
                         <div class="p-4 overflow-y-auto space-y-3 flex-1">
                             <div v-for="(doc, i) in debugInfo.rerank_docs" :key="i"
-                                class="p-3 bg-slate-950 border border-blue-900/30 rounded text-[10px] text-slate-300 leading-relaxed relative">
+                                class="p-3 bg-slate-950 border border-blue-900/30 rounded text-[10px] text-slate-300 leading-relaxed relative break-words">
                                 <div
                                     class="absolute top-0 right-0 bg-blue-600 text-white text-[9px] px-1.5 py-0.5 rounded-bl">
                                     #{{ i+1 }}</div>
-                                {{ doc.slice(0, 200) }}...
+                                {{ doc }}
                             </div>
                             <div v-if="!debugInfo.rerank_docs.length"
                                 class="h-full flex items-center justify-center text-slate-700 text-xs">暂无数据</div>

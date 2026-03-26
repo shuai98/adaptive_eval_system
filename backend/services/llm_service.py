@@ -24,11 +24,16 @@ class GradeOutput(BaseModel):
 
 class LLMService:
     def __init__(self):
+        # ???? DeepSeek Base URL????? /v1
+        base_url = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1").rstrip("/")
+        if not base_url.endswith("/v1"):
+            base_url = f"{base_url}/v1"
+
         # 1. 初始化基础模型
         self.llm = ChatOpenAI(
             model='deepseek-chat', 
             openai_api_key=os.getenv("DEEPSEEK_API_KEY"),
-            openai_api_base='https://api.deepseek.com/v1',
+            openai_api_base=base_url,
             temperature=0.7,#温度调高一点，防止每一次出题雷同
             # 确保这里没有任何 model_kwargs
         )
@@ -37,7 +42,7 @@ class LLMService:
         self.llm_streaming = ChatOpenAI(
             model='deepseek-chat',
             openai_api_key=os.getenv("DEEPSEEK_API_KEY"),
-            openai_api_base='https://api.deepseek.com/v1',
+            openai_api_base=base_url,
             temperature=0.7,
             streaming=True  # 启用流式
         )

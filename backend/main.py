@@ -14,6 +14,7 @@ from backend.core.config import settings
 
 import socket
 from contextlib import asynccontextmanager
+import threading
 
 # 初始化数据库
 Base.metadata.create_all(bind=engine)
@@ -27,7 +28,13 @@ def create_app() -> FastAPI:
     async def lifespan(app: FastAPI):
         # --- [Startup: 应用启动前执行] ---
         # 1. 初始化 RAG 服务（加载模型、读取 FAISS 索引）
-        rag_service.initialize()
+        def _init_rag():
+            try:
+                rag_service.initialize()
+            except Exception as e:
+                print(f"[Warning] RAG initialize failed: {e}")
+
+        threading.Thread(target=_init_rag, daemon=True).start()
 
         # 2. 打印访问链接
         port = 8088 

@@ -38,7 +38,7 @@ async def debug_generation(request: TestRequest):
 
         # 1. RAG 检索
         # 注意：rag_service.search 内部已经计算了精准的 recall 和 rerank 时间
-        search_result = rag_service.search(request.keyword, top_k=3)
+        search_result = rag_service.search(request.keyword, top_k=3, recall_k=15)
         
         # 获取内部计时数据 (例如: {'recall': '120ms', 'rerank': '450ms'})
         # 使用 .get 防止旧代码没返回 timings 导致报错
@@ -106,7 +106,7 @@ async def debug_generation_stream(request: TestRequest):
         
         # 1. RAG 检索
         t_rag_start = time.time()
-        search_result = rag_service.search(request.keyword, top_k=3)
+        search_result = rag_service.search(request.keyword, top_k=3, recall_k=15)
         t_rag_end = time.time()
         rag_duration = t_rag_end - t_rag_start
         

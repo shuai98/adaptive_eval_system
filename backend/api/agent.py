@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import List, Optional
@@ -27,6 +28,9 @@ async def agent_query(request: QueryRequest):
     接收问题，返回基于知识库的答案和来源文档
     """
     try:
+        if not rag_service.is_initialized:
+            raise HTTPException(status_code=503, detail="RAG 正在初始化，请稍后重试")
+
         # 1. 调用 RAG 服务进行检索（使用 Rerank 优化）
         search_result = await rag_service.search_async(request.question, top_k=request.top_k)
         
@@ -54,8 +58,17 @@ async def agent_query(request: QueryRequest):
 3. 保持简洁，突出重点
 4. 如果背景知识不足以完整回答，请说明"""
         
-        llm_response = await llm_service.llm.ainvoke(prompt)
-        answer = llm_response.content.strip()
+        try:
+            # 给 LLM 生成设置超时，避免接口长时间无响应
+            llm_response = await asyncio.wait_for(
+                llm_service.llm.ainvoke(prompt),
+                timeout=8
+            )
+            answer = llm_response.content.strip()
+        except Exception:
+            # LLM 失败时降级，避免直接 500
+            fallback_docs = "\n\n".join(context_docs[:3])
+            answer = "LLM 生成失败，以下为检索片段的直接返回：\n" + fallback_docs[:1500]
 
         # 3. 格式化返回结果（构造 Source 对象列表）
         sources = [

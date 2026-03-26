@@ -17,6 +17,7 @@ class RAGService:
         self.vector_db = None
         self.reranker = None
         self.is_initialized = False
+        self.fast_mode = os.getenv("RAG_FAST_MODE", "true").lower() == "true"
         
         # --- 新增：连接 Redis ---
         try:
@@ -78,13 +79,34 @@ class RAGService:
         return True
 
     #检索的全流程
-    def search(self, keyword, top_k=3):
+    def search(self, keyword, top_k=3, recall_k=None):
         #如果向量数据库还没准备好
         if not self.vector_db:
             return {"final_docs": [], "raw_docs": [], "rerank_docs": [], "timings": {}}
 
+        if recall_k is None:
+            recall_k = 15 if (not self.fast_mode and self.reranker is not None) else top_k
+
+        # Fast mode???????????? rerank
+        if self.fast_mode or self.reranker is None:
+            t0 = time.time()
+            recall_docs_objs = self.vector_db.similarity_search(keyword, k=recall_k)
+            t1 = time.time()
+            recall_time_ms = (t1 - t0) * 1000
+            final_docs_objs = recall_docs_objs[:top_k]
+            result = {
+                "final_docs": [d.page_content for d in final_docs_objs],
+                "raw_docs": [d.page_content for d in recall_docs_objs],
+                "rerank_docs": [d.page_content for d in final_docs_objs],
+                "timings": {
+                    "recall": f"{recall_time_ms:.0f}ms",
+                    "rerank": "0ms (Skipped)"
+                }
+            }
+            return result
+
         # --- 1. 查缓存 (Cache Hit) ---
-        cache_key = f"rag:{keyword}:{top_k}"
+        cache_key = f"rag:{keyword}:{top_k}:{recall_k}"
         
         if self.use_redis:
             try:
@@ -117,7 +139,7 @@ class RAGService:
         
         t0 = time.time()
         # 1. 初步检索 (扩大召回范围到 15 个)
-        initial_docs = self.vector_db.similarity_search(keyword, k=15)
+        initial_docs = self.vector_db.similarity_search(keyword, k=recall_k)
         t1 = time.time()
         recall_time_ms = (t1 - t0) * 1000
         
@@ -141,7 +163,7 @@ class RAGService:
         # 注意：这里我们将 Document 对象转成了字符串列表
         result = {
             "final_docs": [d.page_content for d in final_docs_objs], 
-            "raw_docs": [d.page_content for d in initial_docs[:3]],
+            "raw_docs": [d.page_content for d in initial_docs],
             "rerank_docs": [d.page_content for d in final_docs_objs],
             "timings": {
                 "recall": f"{recall_time_ms:.0f}ms",
@@ -158,7 +180,7 @@ class RAGService:
 
         return result
 
-    async def search_async(self, keyword, top_k=3):
+    async def search_async(self, keyword, top_k=3, recall_k=None):
         """
         异步检索入口：将 CPU 密集的 search 方法放入线程池运行
         避免阻塞 FastAPI 主线程
@@ -167,7 +189,7 @@ class RAGService:
         loop = asyncio.get_running_loop()
         
         # run_in_executor(None, ...) 使用默认线程池
-        return await loop.run_in_executor(None, self.search, keyword, top_k)
+        return await loop.run_in_executor(None, self.search, keyword, top_k, recall_k)
 
 # 单例模式：全局只初始化一次
 rag_service = RAGService()
