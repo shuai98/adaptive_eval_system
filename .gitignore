@@ -46,9 +46,11 @@ data/faiss_index/*.pkl
 # 日志文件
 *.log
 backend/services/metrics/locust_debug.log
+data/*.log
 
 # 临时文件
 *.tmp
+.tmp_*
 *.bak
 project_context.txt
 
@@ -73,6 +75,7 @@ coverage.xml
 *.cover
 .hypothesis/
 .pytest_cache/
+pytest-cache-files-*/
 
 # Jupyter Notebook
 .ipynb_checkpoints

@@ -1,0 +1,44 @@
+{
+  "requested_parser": "docling",
+  "parser_usage": {
+    "text": 1,
+    "docling": 1054
+  },
+  "source_usage": {
+    "db.txt": 1,
+    "流畅的python.pdf": 1019,
+    "网络爬虫－Python和数据分析.pdf": 35
+  },
+  "source_build_stats": {
+    "流畅的python.pdf": {
+      "requested_parser": "docling",
+      "actual_parser": "docling",
+      "docling_strategy": "backend_only",
+      "docling_pages_total": 1022,
+      "docling_pages_success": 1019,
+      "docling_pages_empty": 3,
+      "docling_page_ratio": 0.9971,
+      "docling_errors": 0,
+      "docling_chars": 867651,
+      "baseline_chars": 833668,
+      "docling_char_ratio": 1.0408
+    },
+    "网络爬虫－Python和数据分析.pdf": {
+      "requested_parser": "docling",
+      "actual_parser": "docling",
+      "docling_strategy": "backend_only",
+      "docling_pages_total": 35,
+      "docling_pages_success": 35,
+      "docling_pages_empty": 0,
+      "docling_page_ratio": 1.0,
+      "docling_errors": 0,
+      "docling_chars": 4285,
+      "baseline_chars": 5036,
+      "docling_char_ratio": 0.8509
+    }
+  },
+  "chunk_size": 500,
+  "chunk_overlap": 50,
+  "total_documents": 1055,
+  "total_chunks": 2416
+}

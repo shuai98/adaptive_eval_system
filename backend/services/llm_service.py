@@ -1,3 +1,4 @@
+import asyncio
 import os
 import json
 from dotenv import load_dotenv
@@ -5,6 +6,8 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, AsyncIterator
+
+from backend.core.config import settings
 
 load_dotenv()
 
@@ -76,12 +79,15 @@ class LLMService:
         
         try:
             # 修复：使用 ainvoke 实现真正的异步调用，避免阻塞事件循环
-            result = await chain.ainvoke({
+            result = await asyncio.wait_for(
+                chain.ainvoke({
                 "context": context, 
                 "keyword": keyword,
                 "difficulty": difficulty,
                 "type_desc": type_desc
-            })
+                }),
+                timeout=settings.LLM_REQUEST_TIMEOUT_SEC,
+            )
             return result.model_dump()
         except Exception as e:
             print(f"生成失败: {e}")
@@ -178,11 +184,14 @@ D. [选项D内容]
         
         try:
             # 修复：使用 ainvoke 实现真正的异步调用，避免阻塞事件循环
-            result = await chain.ainvoke({
+            result = await asyncio.wait_for(
+                chain.ainvoke({
                 "question": question, 
                 "standard_answer": standard_answer, 
                 "student_answer": student_answer
-            })
+                }),
+                timeout=settings.LLM_REQUEST_TIMEOUT_SEC,
+            )
             return result.model_dump()
         except Exception as e:
             print(f"评分失败: {e}")

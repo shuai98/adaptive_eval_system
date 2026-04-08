@@ -1,0 +1,284 @@
+{
+  "config": {
+    "dataset_size": 10,
+    "top_k": 3,
+    "recall_k": 15,
+    "temperature": 0,
+    "index_paths": {
+      "pypdf": "D:\\BiShe_code\\adaptive_eval_system\\data\\faiss_index_eval_pypdf",
+      "docling": "D:\\BiShe_code\\adaptive_eval_system\\data\\faiss_index_eval_docling"
+    },
+    "index_build_meta": {
+      "pypdf": {
+        "requested_parser": "pypdf",
+        "parser_usage": {
+          "text": 1,
+          "pypdf": 1057
+        },
+        "source_usage": {
+          "db.txt": 1,
+          "流畅的python.pdf": 1022,
+          "网络爬虫－Python和数据分析.pdf": 35
+        },
+        "chunk_size": 500,
+        "chunk_overlap": 50,
+        "total_documents": 1058,
+        "total_chunks": 2306
+      },
+      "docling": {
+        "requested_parser": "docling",
+        "parser_usage": {
+          "text": 1,
+          "pypdf": 1057
+        },
+        "source_usage": {
+          "db.txt": 1,
+          "流畅的python.pdf": 1022,
+          "网络爬虫－Python和数据分析.pdf": 35
+        },
+        "chunk_size": 500,
+        "chunk_overlap": 50,
+        "total_documents": 1058,
+        "total_chunks": 2306
+      }
+    },
+    "docling_effective": false,
+    "docling_chunk_ratio": 0.0,
+    "docling_fallback": true,
+    "docling_fallback_reason": "Docling extraction quality below threshold: has_docling_parser=False, chunk_ratio=0.0000, min_chunk_ratio=0.1500"
+  },
+  "groups": {
+    "pypdf_no_rerank": {
+      "faithfulness": 0.694,
+      "answer_relevancy": 0.6095,
+      "context_precision": 0.5,
+      "context_recall": 0.5917
+    },
+    "pypdf_with_rerank": {
+      "faithfulness": 0.8636,
+      "answer_relevancy": 0.6829,
+      "context_precision": 0.6574,
+      "context_recall": 0.8583
+    },
+    "docling_no_rerank": {
+      "faithfulness": 0.694,
+      "answer_relevancy": 0.6095,
+      "context_precision": 0.5,
+      "context_recall": 0.5917
+    },
+    "docling_with_rerank": {
+      "faithfulness": 0.8636,
+      "answer_relevancy": 0.6829,
+      "context_precision": 0.6574,
+      "context_recall": 0.8583
+    }
+  },
+  "groups_pct": {
+    "pypdf_no_rerank": {
+      "faithfulness": 69.4,
+      "answer_relevancy": 60.95,
+      "context_precision": 50.0,
+      "context_recall": 59.17
+    },
+    "pypdf_with_rerank": {
+      "faithfulness": 86.36,
+      "answer_relevancy": 68.29,
+      "context_precision": 65.74,
+      "context_recall": 85.83
+    },
+    "docling_no_rerank": {
+      "faithfulness": 69.4,
+      "answer_relevancy": 60.95,
+      "context_precision": 50.0,
+      "context_recall": 59.17
+    },
+    "docling_with_rerank": {
+      "faithfulness": 86.36,
+      "answer_relevancy": 68.29,
+      "context_precision": 65.74,
+      "context_recall": 85.83
+    }
+  },
+  "groups_ci95": {
+    "pypdf_no_rerank": {
+      "faithfulness": [
+        0.4083,
+        0.9257
+      ],
+      "answer_relevancy": [
+        0.4593,
+        0.708
+      ],
+      "context_precision": [
+        0.25,
+        0.8
+      ],
+      "context_recall": [
+        0.375,
+        0.8083
+      ]
+    },
+    "pypdf_with_rerank": {
+      "faithfulness": [
+        0.7273,
+        1.0
+      ],
+      "answer_relevancy": [
+        0.6263,
+        0.7385
+      ],
+      "context_precision": [
+        0.3796,
+        0.8889
+      ],
+      "context_recall": [
+        0.7083,
+        0.975
+      ]
+    },
+    "docling_no_rerank": {
+      "faithfulness": [
+        0.4083,
+        0.9257
+      ],
+      "answer_relevancy": [
+        0.4593,
+        0.708
+      ],
+      "context_precision": [
+        0.25,
+        0.8
+      ],
+      "context_recall": [
+        0.375,
+        0.8083
+      ]
+    },
+    "docling_with_rerank": {
+      "faithfulness": [
+        0.7273,
+        1.0
+      ],
+      "answer_relevancy": [
+        0.6263,
+        0.7385
+      ],
+      "context_precision": [
+        0.3796,
+        0.8889
+      ],
+      "context_recall": [
+        0.7083,
+        0.975
+      ]
+    }
+  },
+  "comparisons": {
+    "rerank_gain_on_pypdf": {
+      "faithfulness": {
+        "abs": 0.1696,
+        "rel_pct": 24.44
+      },
+      "answer_relevancy": {
+        "abs": 0.0734,
+        "rel_pct": 12.04
+      },
+      "context_precision": {
+        "abs": 0.1574,
+        "rel_pct": 31.48
+      },
+      "context_recall": {
+        "abs": 0.2666,
+        "rel_pct": 45.06
+      }
+    },
+    "rerank_gain_on_docling": {
+      "faithfulness": {
+        "abs": 0.1696,
+        "rel_pct": 24.44
+      },
+      "answer_relevancy": {
+        "abs": 0.0734,
+        "rel_pct": 12.04
+      },
+      "context_precision": {
+        "abs": 0.1574,
+        "rel_pct": 31.48
+      },
+      "context_recall": {
+        "abs": 0.2666,
+        "rel_pct": 45.06
+      }
+    },
+    "docling_gain_without_rerank": {
+      "faithfulness": {
+        "abs": 0.0,
+        "rel_pct": 0.0
+      },
+      "answer_relevancy": {
+        "abs": 0.0,
+        "rel_pct": 0.0
+      },
+      "context_precision": {
+        "abs": 0.0,
+        "rel_pct": 0.0
+      },
+      "context_recall": {
+        "abs": 0.0,
+        "rel_pct": 0.0
+      }
+    },
+    "docling_gain_with_rerank": {
+      "faithfulness": {
+        "abs": 0.0,
+        "rel_pct": 0.0
+      },
+      "answer_relevancy": {
+        "abs": 0.0,
+        "rel_pct": 0.0
+      },
+      "context_precision": {
+        "abs": 0.0,
+        "rel_pct": 0.0
+      },
+      "context_recall": {
+        "abs": 0.0,
+        "rel_pct": 0.0
+      }
+    },
+    "overall_best_vs_baseline": {
+      "faithfulness": {
+        "abs": 0.1696,
+        "rel_pct": 24.44
+      },
+      "answer_relevancy": {
+        "abs": 0.0734,
+        "rel_pct": 12.04
+      },
+      "context_precision": {
+        "abs": 0.1574,
+        "rel_pct": 31.48
+      },
+      "context_recall": {
+        "abs": 0.2666,
+        "rel_pct": 45.06
+      }
+    }
+  },
+  "no_rerank": {
+    "faithfulness": 0.694,
+    "answer_relevancy": 0.6095,
+    "context_precision": 0.5,
+    "context_recall": 0.5917
+  },
+  "with_rerank": {
+    "faithfulness": 0.8636,
+    "answer_relevancy": 0.6829,
+    "context_precision": 0.6574,
+    "context_recall": 0.8583
+  },
+  "export_paths": {
+    "csv": "D:\\BiShe_code\\adaptive_eval_system\\data\\ragas_2x2_summary.csv",
+    "markdown": "D:\\BiShe_code\\adaptive_eval_system\\data\\ragas_2x2_summary.md"
+  }
+}

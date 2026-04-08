@@ -1,144 +1,129 @@
-# Docker 部署指南
+﻿# Docker 部署指南
 
 ## 快速开始
 
-### 1. 准备工作
-
-确保已安装 Docker 和 Docker Compose：
-```bash
-docker --version
-docker-compose --version
-```
-
-### 2. 配置环境变量
-
-将 `.env.docker` 重命名为 `.env`，并填写你的 DeepSeek API Key：
-```bash
-copy .env.docker .env
-```
-
-编辑 `.env` 文件：
-```
-DEEPSEEK_API_KEY=sk-your-actual-api-key
-```
-
-### 3. 启动服务
+### 1. 准备环境变量
 
 ```bash
-# 构建并启动所有服务
+copy env.docker .env
+```
+
+编辑 `.env`，至少补齐：
+
+- `DEEPSEEK_API_KEY`
+- `APP_SECRET_KEY`
+- `MYSQL_PASSWORD`
+- `ADMIN_BOOTSTRAP_PASSWORD`
+
+### 2. 启动服务
+
+```bash
 docker-compose up -d
-
-# 查看日志
 docker-compose logs -f backend
 ```
 
-### 4. 初始化数据库
-
-等待服务启动后（约 30 秒），执行初始化脚本：
+### 3. 初始化数据库与管理员
 
 ```bash
-# 初始化数据库表
 docker-compose exec backend python backend/scripts/init_db.py
-
-# 创建管理员账号
 docker-compose exec backend python backend/scripts/create_admin.py
-
-# 初始化 RAG 向量库（如果需要）
 docker-compose exec backend python backend/scripts/init_rag.py
 ```
 
-### 5. 访问系统
+### 4. 访问系统
 
-- 登录页面: http://localhost:8088/static/login.html
-- API 文档: http://localhost:8088/docs
-- Agent 接口: http://localhost:8088/api/query
+- 主入口：`http://localhost:8088/static/app/index.html#/login`
+- API 文档：`http://localhost:8088/docs`
+- Agent 接口：`http://localhost:8088/api/query`
 
-默认管理员账号：
-- 用户名: admin
-- 密码: 1234
+兼容跳转入口仍然保留：
+
+- `http://localhost:8088/static/login.html`
+- `http://localhost:8088/static/student/index.html`
+- `http://localhost:8088/static/teacher/index.html`
+- `http://localhost:8088/static/admin/index.html`
+
+## 管理员说明
+
+管理员创建脚本读取：
+
+- `ADMIN_BOOTSTRAP_USERNAME`，默认 `root`
+- `ADMIN_BOOTSTRAP_PASSWORD`
+
+研发管理中心 `/lab` 仅允许 `root` 账号进入。
 
 ## 常用命令
 
 ```bash
-# 启动服务
 docker-compose up -d
-
-# 停止服务
 docker-compose down
-
-# 重启服务
 docker-compose restart
-
-# 查看日志
 docker-compose logs -f backend
-
-# 进入容器
 docker-compose exec backend bash
-
-# 重新构建镜像
 docker-compose build --no-cache
-
-# 清理所有数据（谨慎使用！）
 docker-compose down -v
 ```
 
 ## 服务说明
 
-### MySQL (端口 3306)
-- 用户名: root
-- 密码: 123456
-- 数据库: adaptive_eval
+### MySQL
 
-### Redis (端口 6379)
-- 无密码
-- 数据库: 0
+- 端口：`3306`
+- 用户：`root`
+- 数据库：`adaptive_eval`
 
-### 后端应用 (端口 8088)
+### Redis
+
+- 端口：`6379`
+- 数据库：`0`
+
+### Backend
+
+- 端口：`8088`
 - FastAPI 应用
-- 自动重启
 
 ## 数据持久化
 
-数据存储在 Docker volumes 中：
-- `mysql_data`: MySQL 数据
-- `redis_data`: Redis 数据
-- `./data`: 文档和向量索引（挂载到宿主机）
+数据保存在 Docker volumes 和挂载目录中：
+
+- `mysql_data`
+- `redis_data`
+- `./data`
 
 ## 故障排查
 
-### 1. 服务启动失败
+### 服务启动失败
+
 ```bash
-# 查看详细日志
 docker-compose logs backend
 ```
 
-### 2. 数据库连接失败
+### 数据库连接失败
+
 ```bash
-# 检查 MySQL 是否就绪
 docker-compose exec mysql mysqladmin ping -h localhost -u root -p123456
 ```
 
-### 3. 端口被占用
-修改 `docker-compose.yml` 中的端口映射：
+### 端口冲突
+
+修改 `docker-compose.yml` 中的端口映射，例如：
+
 ```yaml
 ports:
-  - "8089:8088"  # 改为其他端口
+  - "8089:8088"
 ```
 
-### 4. 重置所有数据
-```bash
-# 停止并删除所有容器和数据卷
-docker-compose down -v
+### 重置所有数据
 
-# 重新启动
+```bash
+docker-compose down -v
 docker-compose up -d
 ```
 
 ## 生产环境建议
 
-1. 修改默认密码（MySQL、管理员账号）
-2. 配置 HTTPS
-3. 限制端口访问
-4. 定期备份数据卷
-5. 配置日志轮转
-
+1. 配置强密码和正式密钥。
+2. 为 FastAPI 前面增加反向代理与 HTTPS。
+3. 限制对数据库和 Redis 端口的直接访问。
+4. 定期备份数据库和 `data/` 目录。
+5. 配置日志轮转与监控。

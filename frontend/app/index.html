@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>自适应评测系统</title>
+    <script>
+        (function () {
+            var entryVersion = "20260408u7";
+            var expectedSearch = "?v=" + entryVersion;
+            if (window.location.search !== expectedSearch) {
+                window.location.replace(window.location.pathname + expectedSearch + window.location.hash);
+                return;
+            }
+            try {
+                var cachedVersion = window.localStorage.getItem("app_entry_version");
+                if (cachedVersion !== entryVersion) {
+                    window.localStorage.setItem("app_entry_version", entryVersion);
+                    if ("caches" in window) {
+                        window.caches.keys().then(function (keys) {
+                            return Promise.all(keys.map(function (key) {
+                                return window.caches.delete(key);
+                            }));
+                        }).catch(function () {});
+                    }
+                }
+            } catch (error) {}
+        })();
+    </script>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.10.0/styles/github-dark.min.css">
+    <link rel="stylesheet" href="/static/app/styles.css?v=20260408u7">
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue-router@4/dist/vue-router.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue3-sfc-loader/dist/vue3-sfc-loader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.10.0/lib/common.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+</head>
+<body>
+    <div id="app"></div>
+    <script src="/static/common/session.js?v=20260408u7"></script>
+    <script src="/static/common/api.js?v=20260408u7"></script>
+    <script type="module" src="/static/app/boot.js?v=20260408u7"></script>
+</body>
+</html>

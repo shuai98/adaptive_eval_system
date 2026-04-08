@@ -1,0 +1,16 @@
+{
+  "requested_parser": "pypdf",
+  "parser_usage": {
+    "text": 1,
+    "pypdf": 1057
+  },
+  "source_usage": {
+    "db.txt": 1,
+    "流畅的python.pdf": 1022,
+    "网络爬虫－Python和数据分析.pdf": 35
+  },
+  "chunk_size": 500,
+  "chunk_overlap": 50,
+  "total_documents": 1058,
+  "total_chunks": 2306
+}
