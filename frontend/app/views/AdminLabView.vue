@@ -16,6 +16,8 @@ const stressHistory = ref([]);
 const debugInfo = reactive({
     raw_docs: [],
     rerank_docs: [],
+    generation_docs: [],
+    generation_doc_indices: [],
     raw_doc_details: [],
     rerank_doc_details: [],
     timing_log: "",
@@ -118,10 +120,19 @@ const rerankItems = computed(() => {
     return debugInfo.rerank_docs.map((text, index) => ({ text, rerank_rank: index + 1 }));
 });
 
+const generationItems = computed(() => (
+    debugInfo.generation_docs.map((text, index) => ({
+        text,
+        generation_rank: index + 1,
+        candidate_index: Number(debugInfo.generation_doc_indices?.[index] ?? index) + 1,
+    }))
+));
+
 const estimatedTokens = computed(() => {
     const sourceLength = [
         ...debugInfo.raw_docs,
         ...debugInfo.rerank_docs,
+        ...debugInfo.generation_docs,
         generatedContent.value,
     ].join(" ").length;
     return Math.max(0, Math.round(sourceLength / 2.6));
@@ -177,13 +188,13 @@ const flowStages = computed(() => ([
     {
         kicker: "Step 2",
         title: "语义精排",
-        copy: "交叉编码器压缩噪音 只留下更强证据",
+        copy: "交叉编码器压缩噪音 保留 Top 6 高可信候选",
         accent: "emerald",
     },
     {
         kicker: "Step 3",
         title: "LLM 题目生成",
-        copy: "带着高质量上下文完成最终生成",
+        copy: "从 Top 6 中随机抽 3 条上下文完成最终生成",
         accent: "sky",
     },
 ]));
@@ -201,6 +212,7 @@ const evaluationCards = computed(() => {
         generation: metricValue(report, versionId, "answer_relevancy"),
     }));
 });
+const ragasDatasetTarget = computed(() => Number(ragasScores.value?.config?.formal_dataset_target || 30));
 
 const stressLabels = computed(() => stressHistory.value.map((item) => item.time));
 const stressChartMeta = computed(() => (
@@ -320,6 +332,7 @@ function debugDocMeta(item) {
     const parts = [];
     if (item.recall_rank) parts.push(`召回 #${item.recall_rank}`);
     if (item.rerank_rank) parts.push(`精排 #${item.rerank_rank}`);
+    if (item.candidate_index) parts.push(`候选位 #${item.candidate_index}`);
     if (item.rerank_score !== undefined && item.rerank_score !== null) parts.push(`分数 ${formatScore(item.rerank_score, 3)}`);
     if (item.source) parts.push(item.source);
     if (item.page) parts.push(`页码 ${item.page}`);
@@ -345,6 +358,8 @@ async function runDebug() {
     generatedContent.value = "";
     debugInfo.raw_docs = [];
     debugInfo.rerank_docs = [];
+    debugInfo.generation_docs = [];
+    debugInfo.generation_doc_indices = [];
     debugInfo.raw_doc_details = [];
     debugInfo.rerank_doc_details = [];
     debugInfo.timing_log = "正在执行链路调试";
@@ -378,6 +393,8 @@ async function runDebug() {
                 if (payload.type === "metadata") {
                     debugInfo.raw_docs = payload.raw_docs || [];
                     debugInfo.rerank_docs = payload.rerank_docs || [];
+                    debugInfo.generation_docs = payload.generation_docs || [];
+                    debugInfo.generation_doc_indices = payload.generation_doc_indices || [];
                     debugInfo.raw_doc_details = payload.raw_doc_details || [];
                     debugInfo.rerank_doc_details = payload.rerank_doc_details || [];
                     debugInfo.timings = payload.timings || {};
@@ -396,7 +413,7 @@ async function runDebug() {
             }
         }
 
-        showToast("调试链路已刷新 可以直接比对初步检索与语义精排", "success", "执行完成");
+        showToast("调试链路已刷新 可以比对召回 Top15、精排 Top6 和生成抽样 Top3", "success", "执行完成");
     } catch (error) {
         showToast(error.message || "调试执行失败", "danger", "执行失败");
     } finally {
@@ -558,7 +575,7 @@ onBeforeUnmount(() => {
                         <span class="eyebrow">Pipeline Debug</span>
                         <h3>检索链路调试</h3>
                     </div>
-                    <span class="headline-note">FAISS → 语义精排 → LLM</span>
+                    <span class="headline-note">FAISS → 语义精排 Top 6 → 随机抽 3 → LLM</span>
                 </div>
 
                 <div class="lab-input-row">
@@ -598,7 +615,7 @@ onBeforeUnmount(() => {
                     <article class="lab-column">
                         <div class="lab-column__head">
                             <h4>语义精排</h4>
-                            <span>精排后的高可信上下文</span>
+                            <span>精排后的 Top 6 高可信候选</span>
                         </div>
                         <div class="lab-doc-list">
                             <article v-for="(item, index) in rerankItems" :key="`rerank-${index}`" class="lab-doc-item">
@@ -607,6 +624,23 @@ onBeforeUnmount(() => {
                                 <p>{{ item.text || item }}</p>
                             </article>
                             <div v-if="!rerankItems.length" class="empty-hint empty-hint--dark">还没有语义精排结果</div>
+                        </div>
+                    </article>
+                </div>
+
+                <div class="lab-columns">
+                    <article class="lab-column">
+                        <div class="lab-column__head">
+                            <h4>生成抽样</h4>
+                            <span>从 Top 6 中随机抽取 3 条喂给大模型</span>
+                        </div>
+                        <div class="lab-doc-list">
+                            <article v-for="(item, index) in generationItems" :key="`generation-${index}`" class="lab-doc-item">
+                                <strong>{{ `生成上下文 ${index + 1}` }}</strong>
+                                <small>{{ debugDocMeta(item) || "来自生成抽样" }}</small>
+                                <p>{{ item.text || item }}</p>
+                            </article>
+                            <div v-if="!generationItems.length" class="empty-hint empty-hint--dark">还没有生成抽样结果</div>
                         </div>
                     </article>
                 </div>
@@ -627,6 +661,7 @@ onBeforeUnmount(() => {
                     <div>
                         <span class="eyebrow">Quality Bench</span>
                         <h3>RAGAS 评测结果</h3>
+                        <span class="headline-note">当前正式集 {{ ragasDatasetTarget }} 条</span>
                     </div>
                     <div class="lab-inline-actions">
                         <span class="headline-note">Faithfulness / Precision / Recall / Generation</span>
@@ -660,10 +695,7 @@ onBeforeUnmount(() => {
                         </div>
                     </article>
                     <div v-if="!evaluationCards.length" class="empty-hint empty-hint--dark lab-empty-cta">
-                        <p>点击下方按钮开始 RAGAS 评估，结果会显示在这里。</p>
-                        <button class="primary-button" type="button" @click="runRagas">
-                            {{ evaluating ? "RAGAS 评估中..." : "开始 RAGAS 评估" }}
-                        </button>
+                        <p>点击右上角按钮开始 RAGAS 评估，结果会显示在这里。</p>
                     </div>
                 </div>
 

@@ -22,10 +22,14 @@ async def debug_generation(request: TestRequest):
     started_at = time.time()
     try:
         logger.info("debug_generation keyword=%s", request.keyword)
-        search_result = rag_service.search(request.keyword, top_k=3, recall_k=15)
+        search_result = rag_service.search(request.keyword, top_k=6, recall_k=15)
         rag_timings = search_result.get("timings", {"recall": "0ms", "rerank": "0ms"})
-        docs = search_result["final_docs"]
-        context = "\n\n".join(docs if docs and isinstance(docs[0], str) else [doc.page_content for doc in docs])
+        generation_docs, generation_doc_indices = rag_service.build_generation_context(
+            search_result.get("final_docs", []),
+            pool_size=6,
+            sample_size=3,
+        )
+        context = "\n\n".join(generation_docs)
 
         llm_started_at = time.time()
         content = await llm_service.generate_quiz(
@@ -50,6 +54,8 @@ async def debug_generation(request: TestRequest):
                 "debug_info": {
                     "raw_docs": search_result["raw_docs"],
                     "rerank_docs": search_result["rerank_docs"],
+                    "generation_docs": generation_docs,
+                    "generation_doc_indices": generation_doc_indices,
                     "raw_doc_details": search_result.get("raw_doc_details", []),
                     "rerank_doc_details": search_result.get("rerank_doc_details", []),
                     "index_info": search_result.get("index_info", {}),
@@ -70,11 +76,15 @@ async def debug_generation_stream(request: TestRequest):
     try:
         logger.info("debug_generation_stream keyword=%s", request.keyword)
         rag_started_at = time.time()
-        search_result = rag_service.search(request.keyword, top_k=3, recall_k=15)
+        search_result = rag_service.search(request.keyword, top_k=6, recall_k=15)
         rag_duration = time.time() - rag_started_at
         rag_timings = search_result.get("timings", {"recall": "0ms", "rerank": "0ms"})
-        docs = search_result["final_docs"]
-        context = "\n\n".join(docs if docs and isinstance(docs[0], str) else [doc.page_content for doc in docs])
+        generation_docs, generation_doc_indices = rag_service.build_generation_context(
+            search_result.get("final_docs", []),
+            pool_size=6,
+            sample_size=3,
+        )
+        context = "\n\n".join(generation_docs)
 
         async def event_stream():
             metadata = {
@@ -83,6 +93,8 @@ async def debug_generation_stream(request: TestRequest):
                 "timings": rag_timings,
                 "raw_docs": search_result["raw_docs"],
                 "rerank_docs": search_result["rerank_docs"],
+                "generation_docs": generation_docs,
+                "generation_doc_indices": generation_doc_indices,
                 "raw_doc_details": search_result.get("raw_doc_details", []),
                 "rerank_doc_details": search_result.get("rerank_doc_details", []),
                 "index_info": search_result.get("index_info", {}),

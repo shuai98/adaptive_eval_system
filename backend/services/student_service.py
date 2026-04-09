@@ -82,10 +82,26 @@ def build_feedback_dimensions(
     }
 
 
-def _debug_info(search_result: dict[str, Any]) -> dict[str, Any]:
+def _build_generation_context(search_result: dict[str, Any]) -> tuple[str, list[str], list[int]]:
+    sampled_docs, sampled_indices = rag_service.build_generation_context(
+        search_result.get("final_docs", []),
+        pool_size=6,
+        sample_size=3,
+    )
+    context = "\n\n".join(sampled_docs)
+    return context, sampled_docs, sampled_indices
+
+
+def _debug_info(
+    search_result: dict[str, Any],
+    sampled_docs: Optional[list[str]] = None,
+    sampled_indices: Optional[list[int]] = None,
+) -> dict[str, Any]:
     return {
         "raw_docs": search_result["raw_docs"],
         "rerank_docs": search_result["rerank_docs"],
+        "generation_docs": sampled_docs or [],
+        "generation_doc_indices": sampled_indices or [],
         "raw_doc_details": search_result.get("raw_doc_details", []),
         "rerank_doc_details": search_result.get("rerank_doc_details", []),
         "index_info": search_result.get("index_info", {}),
@@ -101,8 +117,8 @@ async def generate_question(
     request: QuestionRequest,
 ) -> dict[str, Any]:
     difficulty = resolve_difficulty(db, student_id, request)
-    search_result = await rag_service.search_async(request.keyword)
-    context = "\n\n".join(search_result["final_docs"])
+    search_result = await rag_service.search_async(request.keyword, top_k=6, recall_k=15)
+    context, sampled_docs, sampled_indices = _build_generation_context(search_result)
     content = await llm_service.generate_quiz(
         request.keyword,
         context,
@@ -117,7 +133,7 @@ async def generate_question(
         "question_id": history.id,
         "difficulty": difficulty,
         "context": context,
-        "debug_info": _debug_info(search_result),
+        "debug_info": _debug_info(search_result, sampled_docs, sampled_indices),
         "adaptive_state": learning_analytics_service.build_adaptive_snapshot(
             db,
             student_id,
@@ -134,8 +150,8 @@ def generate_question_task_runner(payload: dict[str, Any]):
         try:
             difficulty = resolve_difficulty(db, int(request.student_id), request)
             task_context.update(progress=0.2, detail="Retrieving study context.")
-            search_result = rag_service.search(request.keyword)
-            context = "\n\n".join(search_result["final_docs"])
+            search_result = rag_service.search(request.keyword, top_k=6, recall_k=15)
+            context, sampled_docs, sampled_indices = _build_generation_context(search_result)
             if task_context.is_cancel_requested():
                 raise RuntimeError("Task cancelled by user.")
             task_context.update(progress=0.55, detail="Generating question.")
@@ -161,7 +177,7 @@ def generate_question_task_runner(payload: dict[str, Any]):
                 "data": normalized,
                 "question_id": history.id,
                 "difficulty": difficulty,
-                "debug_info": _debug_info(search_result),
+                "debug_info": _debug_info(search_result, sampled_docs, sampled_indices),
                 "adaptive_state": learning_analytics_service.build_adaptive_snapshot(
                     db,
                     int(request.student_id),
@@ -322,8 +338,8 @@ async def stream_generate_question(
 ) -> StreamingResponse:
     difficulty = resolve_difficulty(db, student_id, request)
     started_at = time.time()
-    search_result = await rag_service.search_async(request.keyword)
-    context = "\n\n".join(search_result["final_docs"])
+    search_result = await rag_service.search_async(request.keyword, top_k=6, recall_k=15)
+    context, sampled_docs, sampled_indices = _build_generation_context(search_result)
     rag_time_ms = (time.time() - started_at) * 1000
 
     async def event_stream():
@@ -342,6 +358,8 @@ async def stream_generate_question(
             "question_id": history.id,
             "rag_time": f"{rag_time_ms:.0f}ms",
             "timings": search_result.get("timings", {}),
+            "generation_docs": sampled_docs,
+            "generation_doc_indices": sampled_indices,
             "index_info": search_result.get("index_info", {}),
             "runtime_config": search_result.get("runtime_config", {}),
         }

@@ -6,6 +6,7 @@ import gc
 import shutil
 import csv
 import copy
+import logging
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -15,6 +16,7 @@ os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
 from dotenv import load_dotenv
 from datasets import Dataset
+import httpx
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
@@ -29,6 +31,7 @@ from backend.scripts.init_rag import init_local_rag
 from backend.services.experiment_version_service import experiment_version_service
 
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 
 def _resolve_local_hf_model(model_id: str) -> str:
@@ -49,14 +52,34 @@ class RagasService:
         if not base_url.endswith("/v1"):
             base_url = f"{base_url}/v1"
 
-        # Judge LLM for RAGAS itself
-        judge_base_llm = ChatOpenAI(
-            model="deepseek-chat",
-            openai_api_key=os.getenv("DEEPSEEK_API_KEY"),
-            openai_api_base=base_url,
-            temperature=0,
-            n=1,
+        self.request_timeout = float(
+            os.getenv("RAGAS_LLM_TIMEOUT_SEC", str(settings.LLM_REQUEST_TIMEOUT_SEC))
         )
+        self.llm_max_retries = int(os.getenv("RAGAS_LLM_MAX_RETRIES", "6"))
+        max_connections = int(os.getenv("RAGAS_HTTP_MAX_CONNECTIONS", "8"))
+        max_keepalive_connections = int(os.getenv("RAGAS_HTTP_KEEPALIVE_CONNECTIONS", "4"))
+        self.sample_concurrency = max(1, int(os.getenv("RAGAS_SAMPLE_CONCURRENCY", "1")))
+
+        http_limits = httpx.Limits(
+            max_connections=max_connections,
+            max_keepalive_connections=max_keepalive_connections,
+        )
+        self._sync_http_client = httpx.Client(timeout=self.request_timeout, limits=http_limits)
+        self._async_http_client = httpx.AsyncClient(timeout=self.request_timeout, limits=http_limits)
+        llm_common_kwargs = {
+            "model": "deepseek-chat",
+            "openai_api_key": os.getenv("DEEPSEEK_API_KEY"),
+            "openai_api_base": base_url,
+            "temperature": 0,
+            "n": 1,
+            "timeout": self.request_timeout,
+            "max_retries": self.llm_max_retries,
+            "http_client": self._sync_http_client,
+            "http_async_client": self._async_http_client,
+        }
+
+        # Judge LLM for RAGAS itself
+        judge_base_llm = ChatOpenAI(**llm_common_kwargs)
         self.judge_llm = LangchainLLMWrapper(judge_base_llm)
 
         if hasattr(self.judge_llm, "generate"):
@@ -78,13 +101,7 @@ class RagasService:
             self.judge_llm.agenerate = patched_agenerate
 
         # Generation LLM used during evaluation data creation.
-        self.answer_llm = ChatOpenAI(
-            model="deepseek-chat",
-            openai_api_key=os.getenv("DEEPSEEK_API_KEY"),
-            openai_api_base=base_url,
-            temperature=0,
-            n=1,
-        )
+        self.answer_llm = ChatOpenAI(**llm_common_kwargs)
 
         embedding_model = _resolve_local_hf_model("BAAI/bge-small-zh-v1.5")
         self.eval_embeddings = HuggingFaceEmbeddings(
@@ -107,7 +124,7 @@ class RagasService:
             self.answer_relevancy_metric.strictness = strictness
 
         timeout_sec = int(os.getenv("RAGAS_TIMEOUT_SEC", "360"))
-        max_workers = int(os.getenv("RAGAS_MAX_WORKERS", "4"))
+        max_workers = int(os.getenv("RAGAS_MAX_WORKERS", "2"))
         max_retries = int(os.getenv("RAGAS_MAX_RETRIES", "4"))
         self.run_config = RunConfig(
             timeout=timeout_sec,
@@ -568,7 +585,10 @@ class RagasService:
 
         top_k = int(os.getenv("RAG_EVAL_TOP_K", "3"))
         recall_k = int(os.getenv("RAG_EVAL_RECALL_K", "15"))
-        formal_dataset_target = int(os.getenv("RAG_EVAL_FORMAL_SIZE", "50"))
+        formal_dataset_target = int(os.getenv("RAG_EVAL_FORMAL_SIZE", "30"))
+        source_dataset_size = len(golden_data)
+        if formal_dataset_target > 0 and len(golden_data) > formal_dataset_target:
+            golden_data = golden_data[:formal_dataset_target]
         self.docling_fallback_reason = None
 
         print(f"[RAGAS] Building evaluation indexes in sequence. Dataset size: {len(golden_data)}")
@@ -639,7 +659,7 @@ class RagasService:
             )
 
         print("[RAGAS] Generating 2x2 evaluation samples...")
-        sem = asyncio.Semaphore(2)
+        sem = asyncio.Semaphore(self.sample_concurrency)
         parser_index_map = {
             "pypdf": built_pypdf_path,
             "docling": built_docling_path,
@@ -692,6 +712,13 @@ class RagasService:
             gc.collect()
 
         print("[RAGAS] Running RAGAS scoring for 4 groups...")
+        logger.info(
+            "ragas_eval_runtime timeout=%ss llm_max_retries=%s max_workers=%s sample_concurrency=%s",
+            self.request_timeout,
+            self.llm_max_retries,
+            self.run_config.max_workers,
+            self.sample_concurrency,
+        )
 
         def _run_eval(data: Dict[str, List[Any]]):
             return evaluate(
@@ -793,6 +820,7 @@ class RagasService:
         final_report = {
             "config": {
                 "dataset_size": len(golden_data),
+                "dataset_source_size": source_dataset_size,
                 "dataset_path": dataset_path,
                 "dataset_name": os.path.basename(dataset_path),
                 "formal_dataset_target": formal_dataset_target,

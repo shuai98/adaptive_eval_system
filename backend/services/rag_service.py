@@ -1,5 +1,6 @@
 ﻿import json
 import os
+import random
 import time
 from collections import Counter
 from functools import partial
@@ -335,6 +336,23 @@ class RAGService:
             f"rag:{index_name}:{keyword}:{top_k}:{recall_k}:"
             f"rerank:{int(use_rerank)}:fast:{int(self.fast_mode)}:backend:{self.reranker_backend}"
         )
+
+    @staticmethod
+    def build_generation_context(
+        docs: list[str],
+        pool_size: int = 6,
+        sample_size: int = 3,
+    ) -> tuple[list[str], list[int]]:
+        pool = list(docs[: max(1, pool_size)])
+        if not pool:
+            return [], []
+
+        if len(pool) <= sample_size:
+            return pool, list(range(len(pool)))
+
+        sampled_indices = sorted(random.sample(range(len(pool)), sample_size))
+        sampled_docs = [pool[index] for index in sampled_indices]
+        return sampled_docs, sampled_indices
 
     def search(self, keyword, top_k=3, recall_k=None, use_rerank=True):
         if not self.vector_db:
